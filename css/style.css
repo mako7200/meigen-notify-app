@@ -69,6 +69,7 @@ main {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
 }
 
 /* タブセクション */
@@ -502,12 +503,17 @@ main {
 
 /* ボトムナビ */
 nav {
-  height: var(--nav-height);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--card);
   border-top: 1px solid var(--border);
   display: flex;
-  flex-shrink: 0;
   box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  z-index: 50;
 }
 
 .nav-btn {
@@ -516,12 +522,13 @@ nav {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   border: none;
   background: none;
   cursor: pointer;
   color: var(--text-light);
-  font-size: 0.65rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
   transition: color 0.2s;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
@@ -530,8 +537,9 @@ nav {
 .nav-btn.active { color: var(--primary); }
 
 .nav-icon {
-  font-size: 1.4rem;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 /* モーダル */
@@ -649,7 +657,7 @@ nav {
 /* トースト通知 */
 .toast {
   position: fixed;
-  bottom: calc(var(--nav-height) + 16px);
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: #2C1810;
