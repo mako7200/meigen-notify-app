@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>名言通知</title>
+  <meta name="description" content="偉人・哲学者・成功者・スポーツ選手の名言を毎朝お届けするアプリ">
+
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#C8943B">
+
+  <!-- iOS PWA設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="名言通知">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ヘッダー -->
+  <header>
+    <div class="header-title">
+      <span class="header-icon">📜</span>
+      名言通知
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main>
+
+    <!-- ホームタブ -->
+    <section id="tab-home" class="tab-section active">
+      <p class="home-date" id="home-date"></p>
+      <div id="home-quote-area"></div>
+      <button class="shuffle-btn" id="shuffle-btn">
+        🔀　次の名言を見る
+      </button>
+    </section>
+
+    <!-- 一覧タブ -->
+    <section id="tab-list" class="tab-section">
+      <input type="search" class="search-box" id="list-search" placeholder="🔍　名言・著者名で検索...">
+      <div class="category-filter">
+        <button class="filter-btn active" data-cat="all">すべて</button>
+        <button class="filter-btn" data-cat="historical">偉人・歴史</button>
+        <button class="filter-btn" data-cat="philosophy">哲学・思想</button>
+        <button class="filter-btn" data-cat="business">ビジネス</button>
+        <button class="filter-btn" data-cat="sports">スポーツ</button>
+      </div>
+      <div class="count-badge" id="list-count"></div>
+      <div class="quote-list" id="quote-list"></div>
+    </section>
+
+    <!-- 管理タブ -->
+    <section id="tab-manage" class="tab-section">
+      <button class="add-btn" id="add-quote-btn">
+        ＋　名言を追加する
+      </button>
+      <div class="manage-list" id="manage-list"></div>
+    </section>
+
+    <!-- 設定タブ -->
+    <section id="tab-settings" class="tab-section">
+
+      <div class="settings-section">
+        <div class="settings-section-title">通知設定</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">通知をオンにする</div>
+            <div class="settings-sublabel">ホーム画面に追加後に有効になります</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notif-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">通知時間</div>
+            <div class="settings-sublabel">毎日この時間にお届けします</div>
+          </div>
+          <input type="time" class="time-input" id="notif-time" value="07:00">
+        </div>
+
+        <div class="settings-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <button id="test-notif-btn" style="padding:10px 20px; background:var(--bg-warm); border:1.5px solid var(--border); border-radius:10px; font-size:0.9rem; cursor:pointer; color:var(--text-sub);">
+            🔔　テスト通知を送る
+          </button>
+          <div class="notification-note">
+            <strong>iPhoneをお使いの方へ：</strong><br>
+            Safariで「ホーム画面に追加」してから通知を許可してください。
+            iOS 16.4以上が必要です。通知はアプリを開いたときに届きます。
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">カテゴリ設定（表示・通知対象）</div>
+
+        <div class="settings-row">
+          <label class="category-check">
+            <input type="checkbox" id="cat-historical" checked>
+            偉人・歴史上の人物
+          </label>
+        </div>
+        <div class="settings-row">
+          <label class="category-check">
+            <input type="checkbox" id="cat-philosophy" checked>
+            哲学・思想家
+          </label>
+        </div>
+        <div class="settings-row">
+          <label class="category-check">
+            <input type="checkbox" id="cat-business" checked>
+            ビジネス・成功者
+          </label>
+        </div>
+        <div class="settings-row">
+          <label class="category-check">
+            <input type="checkbox" id="cat-sports" checked>
+            スポーツ選手
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">アプリ情報</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">名言通知</div>
+            <div class="settings-sublabel">バージョン 1.0.0</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" id="quotes-total-count"></div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ボトムナビゲーション -->
+  <nav>
+    <button class="nav-btn active" data-tab="home">
+      <span class="nav-icon">🏠</span>
+      ホーム
+    </button>
+    <button class="nav-btn" data-tab="list">
+      <span class="nav-icon">📚</span>
+      一覧
+    </button>
+    <button class="nav-btn" data-tab="manage">
+      <span class="nav-icon">✏️</span>
+      管理
+    </button>
+    <button class="nav-btn" data-tab="settings">
+      <span class="nav-icon">⚙️</span>
+      設定
+    </button>
+  </nav>
+</div>
+
+<!-- 名言追加・編集モーダル -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">名言を追加</div>
+    <div class="form-group">
+      <label class="form-label">名言・格言</label>
+      <textarea class="form-textarea" id="modal-text" placeholder="名言を入力してください..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">著者名</label>
+      <input type="text" class="form-input" id="modal-author" placeholder="例：スティーブ・ジョブズ">
+    </div>
+    <div class="form-group">
+      <label class="form-label">カテゴリ</label>
+      <select class="form-select" id="modal-category">
+        <option value="historical">偉人・歴史上の人物</option>
+        <option value="philosophy">哲学・思想家</option>
+        <option value="business">ビジネス・成功者</option>
+        <option value="sports">スポーツ選手</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modal-cancel">キャンセル</button>
+      <button class="btn-save" id="modal-save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script src="js/quotes.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
