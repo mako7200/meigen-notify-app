@@ -78,6 +78,7 @@ main {
   padding: 20px 16px;
   min-height: 100%;
   animation: fadeIn 0.2s ease;
+  background-color: rgba(9, 6, 39, 0.9);
 }
 
 .tab-section.active {
@@ -512,7 +513,8 @@ nav {
   background: var(--card);
   border-top: 1px solid var(--border);
   display: flex;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  background-color: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 10px rgb(216, 216, 216);
   z-index: 50;
 }
 
@@ -534,12 +536,16 @@ nav {
   -webkit-tap-highlight-color: transparent;
 }
 
+.nav-btn:hover { 
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
 .nav-btn.active { color: var(--primary); }
 
 .nav-icon {
   width: 22px;
   height: 22px;
-  display: block;
+  display: white;
 }
 
 /* モーダル */
