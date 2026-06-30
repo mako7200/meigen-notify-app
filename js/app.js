@@ -68,6 +68,7 @@ function init() {
   renderSettings();
   bindEvents();
   initRipple();
+  initSplash();
   registerServiceWorker();
   checkMorningNotification();
 }
@@ -108,7 +109,9 @@ function renderHome() {
     </div>
   `;
   document.getElementById('card-fav-btn').addEventListener('click', () => toggleFavorite(q.id));
-  typewriter(document.getElementById('quote-text'), q.text);
+  if (!document.getElementById('splash')) {
+    typewriter(document.getElementById('quote-text'), q.text);
+  }
 }
 
 // ── 一覧タブ描画 ──────────────────────────────────────────
@@ -528,6 +531,19 @@ function initRipple() {
     const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete');
     if (!btn) return;
     spawnRipple(btn, e.clientX, e.clientY);
+  });
+}
+
+// ── スプラッシュスクリーン ────────────────────────────────
+function initSplash() {
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+  splash.addEventListener('animationend', e => {
+    if (e.animationName === 'splashFadeOut') {
+      splash.remove();
+      const el = document.getElementById('quote-text');
+      if (el && state.currentQuote) typewriter(el, state.currentQuote.text);
+    }
   });
 }
 
