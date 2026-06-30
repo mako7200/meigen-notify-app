@@ -1,7 +1,7 @@
 {
   "name": "今日の名言",
   "short_name": "今日の名言",
-  "description": "偉人・哲学者・成功者・スポーツ選手の名言を毎日お届けします",
+  "description": "あなたの心に刺さる名言が、きっと見つかる。",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#FAF7F2",
