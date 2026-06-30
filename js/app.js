@@ -499,7 +499,7 @@ function registerServiceWorker() {
     }
   });
 
-  navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+  navigator.serviceWorker.register('./service-worker.js', { scope: './', updateViaCache: 'none' })
     .then(reg => {
       navigator.serviceWorker.ready.then(() => updateNotificationSchedule());
 
