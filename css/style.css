@@ -70,6 +70,7 @@ main {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
+  background: rgba(9, 6, 39, 0.9);
 }
 
 /* タブセクション */
@@ -78,7 +79,6 @@ main {
   padding: 20px 16px;
   min-height: 100%;
   animation: fadeIn 0.2s ease;
-  background-color: rgba(9, 6, 39, 0.9);
 }
 
 .tab-section.active {
@@ -536,8 +536,10 @@ nav {
   -webkit-tap-highlight-color: transparent;
 }
 
-.nav-btn:hover { 
-  background-color: rgba(255, 255, 255, 0.9);
+@media (hover: hover) {
+  .nav-btn:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
 }
 
 .nav-btn.active { color: var(--primary); }
