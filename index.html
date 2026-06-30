@@ -31,6 +31,12 @@
     </div>
   </header>
 
+  <!-- 更新バナー -->
+  <div id="update-banner" class="update-banner">
+    <span>🔄 新しいバージョンがあります</span>
+    <button id="update-btn">更新する</button>
+  </div>
+
   <!-- メインコンテンツ -->
   <main>
 
@@ -45,7 +51,10 @@
 
     <!-- 一覧タブ -->
     <section id="tab-list" class="tab-section">
-      <input type="search" class="search-box" id="list-search" placeholder="名言・著者名で検索...">
+      <div class="search-row">
+        <input type="search" class="search-box" id="list-search" placeholder="名言・著者名で検索...">
+        <button class="fav-filter-btn" id="fav-filter-btn">☆</button>
+      </div>
       <div class="category-filter">
         <button class="filter-btn active" data-cat="all">すべて</button>
         <button class="filter-btn" data-cat="historical">偉人・歴史</button>
@@ -135,7 +144,7 @@
         <div class="settings-section-title">アプリ情報</div>
         <div class="settings-row">
           <div>
-            <div class="settings-label">名言通知</div>
+            <div class="settings-label">今日の名言</div>
             <div class="settings-sublabel">バージョン 1.0.0</div>
           </div>
         </div>

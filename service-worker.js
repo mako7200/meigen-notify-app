@@ -41,6 +41,9 @@ self.addEventListener('fetch', event => {
 let notificationTimer = null;
 
 self.addEventListener('message', event => {
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
   if (event.data.type === 'SCHEDULE_NOTIFICATION') {
     scheduleNotification(event.data.time, event.data.quote);
   }
@@ -63,7 +66,7 @@ function scheduleNotification(timeStr, quote) {
   const delay = target - now;
 
   notificationTimer = setTimeout(() => {
-    self.registration.showNotification('名言通知', {
+    self.registration.showNotification('今日の名言', {
       body: `${quote.text}\n— ${quote.author}`,
       icon: './icons/icon-192.png',
       badge: './icons/icon-192.png',

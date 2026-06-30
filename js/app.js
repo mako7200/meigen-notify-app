@@ -30,6 +30,13 @@ const Storage = {
   },
   setNotificationDate(dateStr) {
     localStorage.setItem('meigen_notif_date', dateStr);
+  },
+  getFavorites() {
+    const saved = localStorage.getItem('meigen_favorites');
+    return saved ? JSON.parse(saved) : [];
+  },
+  saveFavorites(ids) {
+    localStorage.setItem('meigen_favorites', JSON.stringify(ids));
   }
 };
 
@@ -41,7 +48,9 @@ let state = {
   currentQuote: null,
   listFilter: 'all',
   listSearch: '',
-  editingId: null
+  editingId: null,
+  favorites: [],
+  listFavoriteOnly: false
 };
 
 let typewriterTimer = null;
@@ -50,6 +59,7 @@ let typewriterTimer = null;
 function init() {
   state.quotes = Storage.getQuotes();
   state.settings = Storage.getSettings();
+  state.favorites = Storage.getFavorites();
   state.currentQuote = pickRandomQuote();
 
   renderHome();
@@ -86,8 +96,10 @@ function renderHome() {
     return;
   }
 
+  const isFav = state.favorites.includes(q.id);
   document.getElementById('home-quote-area').innerHTML = `
     <div class="quote-card" id="quote-card">
+      <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
       <div class="quote-author">
         <span class="category-badge">${CATEGORY_LABELS[q.category] || q.category}</span>
@@ -95,6 +107,7 @@ function renderHome() {
       </div>
     </div>
   `;
+  document.getElementById('card-fav-btn').addEventListener('click', () => toggleFavorite(q.id));
   typewriter(document.getElementById('quote-text'), q.text);
 }
 
@@ -104,6 +117,12 @@ function renderList() {
   const search = state.listSearch.trim().toLowerCase();
 
   let filtered = state.quotes.filter(q => {
+    if (state.listFavoriteOnly) {
+      const matchSearch = !search ||
+        q.text.toLowerCase().includes(search) ||
+        q.author.toLowerCase().includes(search);
+      return state.favorites.includes(q.id) && matchSearch;
+    }
     const matchCat = filter === 'all' || q.category === filter;
     const matchSearch = !search ||
       q.text.toLowerCase().includes(search) ||
@@ -114,20 +133,26 @@ function renderList() {
   document.getElementById('list-count').textContent = `${filtered.length}件`;
 
   if (filtered.length === 0) {
-    document.getElementById('quote-list').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>';
+    const msg = state.listFavoriteOnly
+      ? '<div class="empty-state"><div class="empty-icon">☆</div><p>お気に入りがまだありません。<br>ホームの星マークで追加してください。</p></div>'
+      : '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>';
+    document.getElementById('quote-list').innerHTML = msg;
     return;
   }
 
-  document.getElementById('quote-list').innerHTML = filtered.map(q => `
-    <div class="quote-list-item">
+  document.getElementById('quote-list').innerHTML = filtered.map(q => {
+    const isFav = state.favorites.includes(q.id);
+    return `
+    <div class="quote-list-item${isFav ? ' is-favorite' : ''}">
+      <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
       <div class="quote-list-text">${escapeHtml(q.text)}</div>
       <div class="quote-list-meta">
         <span class="quote-list-author">${escapeHtml(q.author)}</span>
         <span class="category-badge">${CATEGORY_LABELS[q.category] || q.category}</span>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ── 管理タブ描画 ──────────────────────────────────────────
@@ -249,6 +274,35 @@ function bindEvents() {
   document.getElementById('modal-save').addEventListener('click', saveQuote);
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-overlay')) closeModal();
+  });
+
+  // 一覧：お気に入りボタン（委譲）
+  document.getElementById('quote-list').addEventListener('click', e => {
+    const btn = e.target.closest('.list-fav-btn');
+    if (!btn) return;
+    const id = parseInt(btn.dataset.id);
+    const wasFav = state.favorites.includes(id);
+    toggleFavorite(id);
+
+    if (state.listFavoriteOnly && wasFav) {
+      // お気に入りフィルター中の解除：カードをその場に残して薄くする
+      btn.textContent = '☆';
+      btn.classList.remove('active');
+      const card = btn.closest('.quote-list-item');
+      card.classList.remove('is-favorite');
+      card.classList.add('fav-removed');
+    } else {
+      renderList();
+    }
+  });
+
+  // お気に入りフィルター
+  document.getElementById('fav-filter-btn').addEventListener('click', () => {
+    state.listFavoriteOnly = !state.listFavoriteOnly;
+    const btn = document.getElementById('fav-filter-btn');
+    btn.classList.toggle('active', state.listFavoriteOnly);
+    btn.textContent = state.listFavoriteOnly ? '★' : '☆';
+    renderList();
   });
 
   // 通知テスト
@@ -382,7 +436,7 @@ function checkMorningNotification() {
 function fireNotification() {
   const q = pickRandomQuote();
   if (!q || Notification.permission !== 'granted') return;
-  new Notification('名言通知', {
+  new Notification('今日の名言', {
     body: `${q.text}\n— ${q.author}`,
     icon: './icons/icon-192.png',
     tag: 'daily-quote'
@@ -417,11 +471,43 @@ function updateNotificationSchedule() {
 // ── Service Worker登録 ────────────────────────────────────
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
   navigator.serviceWorker.register('./service-worker.js', { scope: './' })
     .then(reg => {
       navigator.serviceWorker.ready.then(() => updateNotificationSchedule());
+
+      if (reg.waiting) {
+        showUpdateBanner(reg.waiting);
+        return;
+      }
+
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner(newWorker);
+          }
+        });
+      });
     })
     .catch(err => console.warn('SW登録失敗:', err));
+}
+
+function showUpdateBanner(worker) {
+  const banner = document.getElementById('update-banner');
+  banner.classList.add('show');
+  document.getElementById('update-btn').addEventListener('click', () => {
+    banner.classList.remove('show');
+    worker.postMessage({ type: 'SKIP_WAITING' });
+  });
 }
 
 // ── リップルエフェクト ────────────────────────────────────
@@ -443,6 +529,26 @@ function initRipple() {
     if (!btn) return;
     spawnRipple(btn, e.clientX, e.clientY);
   });
+}
+
+// ── お気に入り ────────────────────────────────────────────
+function toggleFavorite(id) {
+  if (state.favorites.includes(id)) {
+    state.favorites = state.favorites.filter(f => f !== id);
+  } else {
+    state.favorites.push(id);
+  }
+  Storage.saveFavorites(state.favorites);
+
+  const isFav = state.favorites.includes(id);
+  if (state.currentQuote && state.currentQuote.id === id) {
+    const btn = document.getElementById('card-fav-btn');
+    if (btn) {
+      btn.textContent = isFav ? '★' : '☆';
+      btn.classList.toggle('active', isFav);
+    }
+  }
+  showToast(isFav ? '⭐ お気に入りに追加しました' : 'お気に入りを解除しました');
 }
 
 // ── タイプライター ────────────────────────────────────────
