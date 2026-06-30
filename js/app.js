@@ -54,6 +54,7 @@ let state = {
 };
 
 let typewriterTimer = null;
+let audioCtx = null;
 
 // ── 初期化 ────────────────────────────────────────────────
 function init() {
@@ -109,7 +110,15 @@ function renderHome() {
       </div>
     </div>
   `;
-  document.getElementById('card-fav-btn').addEventListener('click', () => toggleFavorite(q.id));
+  document.getElementById('card-fav-btn').addEventListener('click', () => {
+    const wasFav = state.favorites.includes(q.id);
+    toggleFavorite(q.id);
+    if (!wasFav) {
+      const btn = document.getElementById('card-fav-btn');
+      if (btn) spawnStarBurst(btn);
+      playStarSound();
+    }
+  });
   if (!document.getElementById('splash')) {
     typewriter(document.getElementById('quote-text'), q.text);
   }
@@ -286,6 +295,12 @@ function bindEvents() {
     if (!btn) return;
     const id = parseInt(btn.dataset.id);
     const wasFav = state.favorites.includes(id);
+
+    if (!wasFav) {
+      spawnStarBurst(btn);
+      playStarSound();
+    }
+
     toggleFavorite(id);
 
     if (state.listFavoriteOnly && wasFav) {
@@ -640,6 +655,50 @@ function typewriter(el, text, speed = 60) {
       el.classList.remove('typing');
     }
   }, speed);
+}
+
+// ── 効果音（お気に入り追加時） ────────────────────────────
+function playStarSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [
+      { freq: 1047, delay: 0,    dur: 0.22, vol: 0.28 },
+      { freq: 1319, delay: 0.07, dur: 0.20, vol: 0.22 },
+      { freq: 1568, delay: 0.13, dur: 0.32, vol: 0.18 },
+    ];
+    notes.forEach(({ freq, delay, dur, vol }) => {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = audioCtx.currentTime + delay;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(vol, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t);
+      osc.stop(t + dur + 0.01);
+    });
+  } catch (e) {}
+}
+
+// ── スターバーストエフェクト ──────────────────────────────
+function spawnStarBurst(btn) {
+  const rect = btn.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top  + rect.height / 2;
+  for (let i = 0; i < 8; i++) {
+    const ray = document.createElement('div');
+    ray.className = 'star-burst-ray';
+    ray.style.setProperty('--ra', (360 / 8) * i + 'deg');
+    ray.style.left = cx + 'px';
+    ray.style.top  = cy + 'px';
+    document.body.appendChild(ray);
+    ray.addEventListener('animationend', () => ray.remove());
+  }
+  btn.classList.add('star-flash');
+  btn.addEventListener('animationend', () => btn.classList.remove('star-flash'), { once: true });
 }
 
 // ── ユーティリティ ────────────────────────────────────────

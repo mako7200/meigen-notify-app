@@ -55,6 +55,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+button { -webkit-tap-highlight-color: transparent; }
+
 html, body {
   height: 100%;
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
@@ -197,6 +199,18 @@ main {
 }
 
 /* ホームタブ */
+#tab-home.active {
+  display: flex;
+  flex-direction: column;
+}
+
+#tab-home #home-quote-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .home-date {
   text-align: center;
   font-size: 0.8rem;
@@ -1030,4 +1044,35 @@ main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     transform: scale(4);
     opacity: 0;
   }
+}
+
+/* お気に入り追加：スターバースト＋フラッシュ */
+.star-burst-ray {
+  position: fixed;
+  width: 2px;
+  height: 10px;
+  background: #F0C878;
+  border-radius: 2px;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  z-index: 9998;
+  margin-left: -1px;
+  margin-top: -10px;
+  animation: starBurstRay 0.44s ease-out forwards;
+}
+
+@keyframes starBurstRay {
+  0%   { transform: rotate(var(--ra)) scaleY(1.2) translateY(0px);   opacity: 1; }
+  100% { transform: rotate(var(--ra)) scaleY(0.2) translateY(-24px); opacity: 0; }
+}
+
+@keyframes starFlash {
+  0%   { filter: brightness(1); }
+  18%  { filter: brightness(3.5) drop-shadow(0 0 8px #fff); }
+  100% { filter: brightness(1)   drop-shadow(0 0 5px rgba(240,200,120,0.7)); }
+}
+
+.card-fav-btn.star-flash,
+.list-fav-btn.star-flash {
+  animation: starFlash 0.38s ease-out forwards;
 }
