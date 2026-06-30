@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meigen-notify-v2';
+const CACHE_NAME = 'meigen-notify-v3';
 const CACHE_FILES = [
   './',
   './index.html',
@@ -14,7 +14,6 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(CACHE_FILES))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {

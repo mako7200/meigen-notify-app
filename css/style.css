@@ -76,7 +76,8 @@ html, body {
 
 /* ヘッダー */
 header {
-  height: var(--header-height);
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   background: #0a0820;
   color: #FFF;
   display: flex;
@@ -107,8 +108,8 @@ header .header-icon {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: var(--primary-dark);
-  color: #fff;
+  background: #0d1117;
+  color: #4ade80;
   font-size: 0.85rem;
   flex-shrink: 0;
   gap: 12px;
@@ -121,7 +122,7 @@ header .header-icon {
 .update-banner button {
   padding: 6px 16px;
   background: #fff;
-  color: var(--primary-dark);
+  color: #0d1117;
   border: none;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -202,6 +203,7 @@ main {
 #tab-home.active {
   display: flex;
   flex-direction: column;
+  min-height: calc(100% - var(--nav-height) - env(safe-area-inset-bottom, 0px));
 }
 
 #tab-home #home-quote-area {
