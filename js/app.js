@@ -44,6 +44,8 @@ let state = {
   editingId: null
 };
 
+let typewriterTimer = null;
+
 // ── 初期化 ────────────────────────────────────────────────
 function init() {
   state.quotes = Storage.getQuotes();
@@ -55,6 +57,7 @@ function init() {
   renderManage();
   renderSettings();
   bindEvents();
+  initRipple();
   registerServiceWorker();
   checkMorningNotification();
 }
@@ -85,13 +88,14 @@ function renderHome() {
 
   document.getElementById('home-quote-area').innerHTML = `
     <div class="quote-card" id="quote-card">
-      <div class="quote-text">${escapeHtml(q.text)}</div>
+      <div class="quote-text" id="quote-text"></div>
       <div class="quote-author">
         <span class="category-badge">${CATEGORY_LABELS[q.category] || q.category}</span>
         <span class="quote-author-name">${escapeHtml(q.author)}</span>
       </div>
     </div>
   `;
+  typewriter(document.getElementById('quote-text'), q.text);
 }
 
 // ── 一覧タブ描画 ──────────────────────────────────────────
@@ -252,14 +256,24 @@ function bindEvents() {
 }
 
 // ── タブ切り替え ──────────────────────────────────────────
+const TAB_ORDER = ['home', 'list', 'manage', 'settings'];
+
 function switchTab(tab) {
+  const prevIndex = TAB_ORDER.indexOf(state.currentTab);
+  const nextIndex = TAB_ORDER.indexOf(tab);
+  const slideClass = nextIndex >= prevIndex ? 'slide-right' : 'slide-left';
+
   state.currentTab = tab;
 
-  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active', 'slide-right', 'slide-left'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'bounce'));
 
-  document.getElementById(`tab-${tab}`).classList.add('active');
-  document.querySelector(`.nav-btn[data-tab="${tab}"]`).classList.add('active');
+  const newSection = document.getElementById(`tab-${tab}`);
+  newSection.classList.add('active', slideClass);
+
+  const newBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+  newBtn.classList.add('active', 'bounce');
+  setTimeout(() => newBtn.classList.remove('bounce'), 350);
 
   if (tab === 'list') renderList();
   if (tab === 'manage') renderManage();
@@ -408,6 +422,44 @@ function registerServiceWorker() {
       navigator.serviceWorker.ready.then(() => updateNotificationSchedule());
     })
     .catch(err => console.warn('SW登録失敗:', err));
+}
+
+// ── リップルエフェクト ────────────────────────────────────
+function spawnRipple(btn, clientX, clientY) {
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const ripple = document.createElement('span');
+  ripple.classList.add('ripple');
+  ripple.style.width  = ripple.style.height = `${size}px`;
+  ripple.style.left   = `${clientX - rect.left - size / 2}px`;
+  ripple.style.top    = `${clientY - rect.top  - size / 2}px`;
+  btn.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 1100);
+}
+
+function initRipple() {
+  document.addEventListener('pointerdown', e => {
+    const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete');
+    if (!btn) return;
+    spawnRipple(btn, e.clientX, e.clientY);
+  });
+}
+
+// ── タイプライター ────────────────────────────────────────
+function typewriter(el, text, speed = 60) {
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  el.classList.add('typing');
+  el.textContent = '';
+  let i = 0;
+  typewriterTimer = setInterval(() => {
+    el.textContent += text[i];
+    i++;
+    if (i >= text.length) {
+      clearInterval(typewriterTimer);
+      typewriterTimer = null;
+      el.classList.remove('typing');
+    }
+  }, speed);
 }
 
 // ── ユーティリティ ────────────────────────────────────────
