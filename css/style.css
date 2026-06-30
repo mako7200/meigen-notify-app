@@ -900,6 +900,95 @@ nav {
   transform: translateX(-50%) translateY(0);
 }
 
+/* インストールバナー */
+.install-banner {
+  display: none;
+  position: fixed;
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 12px);
+  left: 12px;
+  right: 12px;
+  background: #1a1a2e;
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  z-index: 80;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  flex-direction: column;
+  gap: 10px;
+}
+
+.install-banner.show {
+  display: flex;
+  animation: slideUpBanner 0.4s ease;
+}
+
+@keyframes slideUpBanner {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.install-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.install-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: #F0C878;
+  margin-top: 2px;
+}
+
+.install-msg {
+  flex: 1;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.install-add-btn {
+  padding: 6px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.install-close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.install-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding-left: 2px;
+}
+
+.install-check-label input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
 /* スクロールバー */
 main::-webkit-scrollbar { width: 4px; }
 main::-webkit-scrollbar-track { background: transparent; }

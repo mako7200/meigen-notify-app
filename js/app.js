@@ -69,6 +69,7 @@ function init() {
   bindEvents();
   initRipple();
   initSplash();
+  initInstallBanner();
   registerServiceWorker();
   checkMorningNotification();
 }
@@ -532,6 +533,63 @@ function initRipple() {
     if (!btn) return;
     spawnRipple(btn, e.clientX, e.clientY);
   });
+}
+
+// ── インストールバナー ────────────────────────────────────
+let deferredPrompt = null;
+
+function initInstallBanner() {
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
+  if (localStorage.getItem('install_dismissed')) return;
+
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+  if (isIOS) {
+    setTimeout(() => showInstallBanner('ios'), 3500);
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setTimeout(() => showInstallBanner('android'), 3500);
+  });
+}
+
+function showInstallBanner(type) {
+  const banner   = document.getElementById('install-banner');
+  const msg      = document.getElementById('install-msg');
+  const addBtn   = document.getElementById('install-btn');
+  const closeBtn = document.getElementById('install-close');
+
+  if (type === 'ios') {
+    msg.innerHTML = 'Safari の「共有」→「ホーム画面に追加」でインストールできます。<br><small style="opacity:0.7;">※Web版ではお気に入りが保存されない場合があります。</small>';
+    addBtn.style.display = 'none';
+  } else {
+    msg.innerHTML = 'ホーム画面に追加して、アプリとして使いましょう。<br><small style="opacity:0.7;">※Web版ではお気に入りが保存されない場合があります。</small>';
+    addBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      }
+      localStorage.setItem('install_dismissed', '1');
+      hideInstallBanner();
+    });
+  }
+
+  banner.classList.add('show');
+
+  closeBtn.addEventListener('click', () => {
+    if (document.getElementById('install-no-show').checked) {
+      localStorage.setItem('install_dismissed', '1');
+    }
+    hideInstallBanner();
+  });
+}
+
+function hideInstallBanner() {
+  document.getElementById('install-banner').classList.remove('show');
 }
 
 // ── スプラッシュスクリーン ────────────────────────────────
