@@ -52,12 +52,18 @@
 
       <!-- 日記セクション -->
       <div class="diary-section" id="diary-section" style="display:none">
-        <button class="diary-toggle-btn" id="diary-toggle-btn">✏  今日の感想を書く</button>
+        <button class="diary-toggle-btn" id="diary-toggle-btn">
+          <svg class="diary-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
+          コメントを書く
+        </button>
         <div class="diary-editor hidden" id="diary-editor">
-          <textarea class="diary-textarea" id="diary-textarea" maxlength="100" placeholder="この言葉を読んで感じたことを...（100文字以内）"></textarea>
+          <textarea class="diary-textarea" id="diary-textarea" maxlength="100"></textarea>
           <div class="diary-meta">
             <span class="diary-char-count" id="diary-char-count">0 / 100</span>
-            <button class="diary-save-btn" id="diary-save-btn">保存</button>
+            <div class="diary-meta-buttons">
+              <button class="diary-cancel-btn" id="diary-cancel-btn">閉じる</button>
+              <button class="diary-save-btn" id="diary-save-btn">保存</button>
+            </div>
           </div>
         </div>
       </div>
@@ -159,7 +165,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.0.0</div>
+            <div class="settings-sublabel">Version 2.1.0</div>
           </div>
         </div>
         <div class="settings-row">
@@ -228,6 +234,14 @@
         <option value="sports">スポーツ選手</option>
       </select>
     </div>
+    <div class="form-group">
+      <label class="form-label">人物紹介（任意）</label>
+      <textarea class="form-textarea" id="modal-author-bio" placeholder="著者についての簡単な紹介を入力..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">背景・語源（任意）</label>
+      <textarea class="form-textarea" id="modal-background" placeholder="この名言が生まれた背景や由来を入力..."></textarea>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="modal-cancel">キャンセル</button>
       <button class="btn-save" id="modal-save">保存する</button>
@@ -245,16 +259,24 @@
     </div>
     <div class="detail-quote-text" id="detail-text"></div>
     <div class="detail-quote-author" id="detail-author"></div>
+    <div class="detail-info-block" id="detail-bio-block" style="display:none">
+      <div class="detail-info-title">この人物について</div>
+      <p class="detail-info-text" id="detail-bio-text"></p>
+    </div>
+    <div class="detail-info-block" id="detail-background-block" style="display:none">
+      <div class="detail-info-title">この名言について</div>
+      <p class="detail-info-text" id="detail-background-text"></p>
+    </div>
     <div class="form-group" style="margin-top:20px">
-      <label class="form-label">感想・日記</label>
-      <textarea class="form-textarea" id="detail-diary-textarea" maxlength="100" placeholder="この言葉への感想を...（100文字以内）"></textarea>
+      <label class="form-label">コメント</label>
+      <textarea class="form-textarea" id="detail-diary-textarea" maxlength="100"></textarea>
       <div class="diary-char-row">
         <span id="detail-diary-count">0</span> / 100
       </div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="detail-cancel">閉じる</button>
-      <button class="btn-save" id="detail-save">感想を保存</button>
+      <button class="btn-save" id="detail-save">保存</button>
     </div>
   </div>
 </div>

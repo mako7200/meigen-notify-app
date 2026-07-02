@@ -1,15 +1,38 @@
 'use strict';
 
 // ── ストレージ管理 ────────────────────────────────────────
+// quotes.jsの組み込みデータに新しいフィールドを追加した際、
+// 既に端末に保存済みの名言データへ後から補うためのバージョン番号
+const QUOTES_DATA_VERSION = 2;
+
 const Storage = {
   getQuotes() {
     const saved = localStorage.getItem('meigen_quotes');
-    if (saved) return JSON.parse(saved);
+    if (saved) return this.migrateQuotes(JSON.parse(saved));
     const initial = INITIAL_QUOTES.map(q => ({ ...q }));
     this.saveQuotes(initial);
+    localStorage.setItem('meigen_quotes_version', String(QUOTES_DATA_VERSION));
     return initial;
   },
   saveQuotes(quotes) { localStorage.setItem('meigen_quotes', JSON.stringify(quotes)); },
+  migrateQuotes(quotes) {
+    const savedVersion = Number(localStorage.getItem('meigen_quotes_version') || '1');
+    if (savedVersion >= QUOTES_DATA_VERSION) return quotes;
+    const initialById = {};
+    INITIAL_QUOTES.forEach(q => { initialById[q.id] = q; });
+    const migrated = quotes.map(q => {
+      const initial = initialById[q.id];
+      if (!initial) return q;
+      return {
+        ...q,
+        authorBio: q.authorBio || initial.authorBio || '',
+        background: q.background || initial.background || ''
+      };
+    });
+    this.saveQuotes(migrated);
+    localStorage.setItem('meigen_quotes_version', String(QUOTES_DATA_VERSION));
+    return migrated;
+  },
   getSettings() {
     const saved = localStorage.getItem('meigen_settings');
     if (saved) return JSON.parse(saved);
@@ -142,12 +165,14 @@ function renderHome() {
 }
 
 // ── ホーム日記セクション描画 ─────────────────────────────
+const DIARY_TOGGLE_ICON = '<svg class="diary-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>';
+
 function renderDiarySection(quoteId) {
   const section = document.getElementById('diary-section');
   section.style.display = 'block';
   const existing = state.diary[quoteId] || '';
 
-  document.getElementById('diary-toggle-btn').textContent = existing ? '✏  感想を編集する' : '✏  今日の感想を書く';
+  document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${existing ? 'コメントを編集する' : 'コメントを書く'}`;
   const editor = document.getElementById('diary-editor');
   editor.classList.add('hidden');
   document.getElementById('diary-textarea').value = existing;
@@ -182,13 +207,13 @@ function renderList() {
     const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
     return `
       <div class="quote-list-item${isFav ? ' is-favorite' : ''}" data-id="${q.id}">
-        <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">★</button>
+        <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
         <div class="quote-list-text">${escapeHtml(q.text)}</div>
         <div class="quote-list-meta">
           <span class="quote-list-author">${escapeHtml(q.author)}</span>
           <span class="category-badge">${CATEGORY_LABELS[q.category] || q.category}</span>
         </div>
-        ${hasDiary ? '<div class="diary-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 感想あり</div>' : ''}
+        ${hasDiary ? '<div class="diary-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> コメントあり</div>' : ''}
       </div>
     `;
   }).join('');
@@ -203,7 +228,6 @@ function renderList() {
               <rect x="5" y="11" width="14" height="10" rx="2"/>
               <path d="M8 11V7a4 4 0 018 0v4"/>
             </svg>
-            <span class="locked-label">？？？</span>
           </div>
         </div>
       `;
@@ -215,12 +239,14 @@ function renderList() {
 
 // ── 管理タブ描画 ──────────────────────────────────────────
 function renderManage() {
-  if (state.quotes.length === 0) {
+  const unlockedIds = state.unlocked.map(u => u.id);
+  const quotes = state.quotes.filter(q => unlockedIds.includes(q.id));
+  if (quotes.length === 0) {
     document.getElementById('manage-list').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">✏️</div><p>名言がありません。<br>上のボタンから追加してください。</p></div>';
+      '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
     return;
   }
-  document.getElementById('manage-list').innerHTML = state.quotes.map(q => `
+  document.getElementById('manage-list').innerHTML = quotes.map(q => `
     <div class="manage-item">
       <div class="manage-item-content">
         <div class="manage-item-text">${escapeHtml(q.text)}</div>
@@ -366,14 +392,23 @@ function bindEvents() {
     document.getElementById('diary-char-count').textContent = `${e.target.value.length} / 100`;
   });
 
+  // 日記：閉じるボタン（未保存の入力は破棄）
+  document.getElementById('diary-cancel-btn').addEventListener('click', () => {
+    if (!state.currentQuote) return;
+    const existing = state.diary[state.currentQuote.id] || '';
+    document.getElementById('diary-textarea').value = existing;
+    document.getElementById('diary-char-count').textContent = `${existing.length} / 100`;
+    document.getElementById('diary-editor').classList.add('hidden');
+  });
+
   // 日記：保存ボタン
   document.getElementById('diary-save-btn').addEventListener('click', () => {
     if (!state.currentQuote) return;
     const text = document.getElementById('diary-textarea').value.trim();
     saveDiaryEntry(state.currentQuote.id, text);
     document.getElementById('diary-editor').classList.add('hidden');
-    document.getElementById('diary-toggle-btn').textContent = text ? '✏  感想を編集する' : '✏  今日の感想を書く';
-    showToast(text ? '感想を保存しました' : '感想を削除しました');
+    document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${text ? 'コメントを編集する' : 'コメントを書く'}`;
+    showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
   });
 
   // 詳細モーダル：閉じる・保存
@@ -387,7 +422,7 @@ function bindEvents() {
     saveDiaryEntry(id, text);
     renderList();
     closeDetailModal();
-    showToast(text ? '感想を保存しました' : '感想を削除しました');
+    showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
   });
   document.getElementById('detail-diary-textarea').addEventListener('input', e => {
     document.getElementById('detail-diary-count').textContent = e.target.value.length;
@@ -423,6 +458,8 @@ function openAddModal() {
   document.getElementById('modal-text').value = '';
   document.getElementById('modal-author').value = '';
   document.getElementById('modal-category').value = 'historical';
+  document.getElementById('modal-author-bio').value = '';
+  document.getElementById('modal-background').value = '';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -434,6 +471,8 @@ function openEditModal(id) {
   document.getElementById('modal-text').value = q.text;
   document.getElementById('modal-author').value = q.author;
   document.getElementById('modal-category').value = q.category;
+  document.getElementById('modal-author-bio').value = q.authorBio || '';
+  document.getElementById('modal-background').value = q.background || '';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -446,13 +485,15 @@ function saveQuote() {
   const text = document.getElementById('modal-text').value.trim();
   const author = document.getElementById('modal-author').value.trim();
   const category = document.getElementById('modal-category').value;
+  const authorBio = document.getElementById('modal-author-bio').value.trim();
+  const background = document.getElementById('modal-background').value.trim();
   if (!text || !author) { showToast('名言と著者名を入力してください'); return; }
   if (state.editingId) {
-    state.quotes = state.quotes.map(q => q.id === state.editingId ? { ...q, text, author, category } : q);
+    state.quotes = state.quotes.map(q => q.id === state.editingId ? { ...q, text, author, category, authorBio, background } : q);
     showToast('名言を更新しました');
   } else {
     const newId = state.quotes.length > 0 ? Math.max(...state.quotes.map(q => q.id)) + 1 : 1;
-    state.quotes.push({ id: newId, text, author, category });
+    state.quotes.push({ id: newId, text, author, category, authorBio, background });
     showToast('名言を追加しました');
   }
   Storage.saveQuotes(state.quotes);
@@ -475,14 +516,30 @@ function openDetailModal(id) {
   const q = state.quotes.find(q => q.id === id);
   if (!q) return;
   const unlockInfo = state.unlocked.find(u => u.id === id);
-  const dateLabel = unlockInfo ? unlockInfo.date : '';
   const existing = state.diary[id] || '';
 
   document.getElementById('detail-modal-overlay').dataset.quoteId = id;
   document.getElementById('detail-badge').textContent = CATEGORY_LABELS[q.category] || q.category;
   document.getElementById('detail-text').textContent = q.text;
   document.getElementById('detail-author').textContent = `— ${q.author}`;
-  document.getElementById('detail-date').textContent = dateLabel ? `解放日: ${dateLabel}` : '';
+  document.getElementById('detail-date').textContent = unlockInfo ? formatUnlockDate(unlockInfo.date) : '';
+
+  const bioBlock = document.getElementById('detail-bio-block');
+  if (q.authorBio) {
+    document.getElementById('detail-bio-text').textContent = q.authorBio;
+    bioBlock.style.display = 'block';
+  } else {
+    bioBlock.style.display = 'none';
+  }
+
+  const backgroundBlock = document.getElementById('detail-background-block');
+  if (q.background) {
+    document.getElementById('detail-background-text').textContent = q.background;
+    backgroundBlock.style.display = 'block';
+  } else {
+    backgroundBlock.style.display = 'none';
+  }
+
   document.getElementById('detail-diary-textarea').value = existing;
   document.getElementById('detail-diary-count').textContent = existing.length;
   document.getElementById('detail-modal-overlay').classList.add('open');
@@ -490,6 +547,11 @@ function openDetailModal(id) {
 
 function closeDetailModal() {
   document.getElementById('detail-modal-overlay').classList.remove('open');
+}
+
+function formatUnlockDate(dateStr) {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日の名言`;
 }
 
 // ── 日記保存 ─────────────────────────────────────────────
@@ -601,7 +663,7 @@ function spawnRipple(btn, clientX, clientY) {
 
 function initRipple() {
   document.addEventListener('pointerdown', e => {
-    const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .diary-save-btn, .detail-save-btn');
+    const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .diary-save-btn, .diary-cancel-btn, .detail-save-btn');
     if (!btn) return;
     spawnRipple(btn, e.clientX, e.clientY);
   });

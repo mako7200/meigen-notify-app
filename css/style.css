@@ -500,7 +500,6 @@ main {
   cursor: pointer;
   padding: 4px;
   line-height: 1;
-  color: var(--text-light);
   transition: transform 0.15s, color 0.2s;
   display: inline-flex;
   align-items: center;
@@ -1030,6 +1029,12 @@ nav {
 
 .diary-toggle-btn:active { background: rgba(255,255,255,0.1); }
 
+.diary-toggle-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
 .diary-editor {
   margin-top: 8px;
   background: rgba(255,255,255,0.05);
@@ -1069,6 +1074,25 @@ nav {
   color: rgba(255,255,255,0.35);
 }
 
+.diary-meta-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.diary-cancel-btn {
+  padding: 6px 18px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,248,230,0.8);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
 .diary-save-btn {
   padding: 6px 18px;
   background: var(--primary);
@@ -1083,7 +1107,7 @@ nav {
   overflow: hidden;
 }
 
-/* ── 一覧：感想ありバッジ ────────────────────────────── */
+/* ── 一覧：コメントありバッジ ────────────────────────────── */
 .diary-badge {
   display: inline-flex;
   align-items: center;
@@ -1119,12 +1143,6 @@ nav {
   color: #fff;
 }
 
-.locked-label {
-  font-size: 0.85rem;
-  color: #fff;
-  letter-spacing: 0.25em;
-}
-
 /* ── 詳細モーダル ────────────────────────────────────── */
 .detail-badge-row {
   display: flex;
@@ -1152,6 +1170,28 @@ nav {
   color: var(--text-sub);
   font-weight: bold;
   margin-bottom: 4px;
+}
+
+.detail-info-block {
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+
+.detail-info-title {
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: var(--primary-dark);
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+}
+
+.detail-info-text {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text-sub);
 }
 
 .diary-char-row {
