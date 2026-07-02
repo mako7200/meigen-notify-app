@@ -49,9 +49,18 @@
     <section id="tab-home" class="tab-section active">
       <p class="home-date" id="home-date"></p>
       <div id="home-quote-area"></div>
-      <button class="shuffle-btn" id="shuffle-btn">
-      次の名言を見る
-      </button>
+
+      <!-- 日記セクション -->
+      <div class="diary-section" id="diary-section" style="display:none">
+        <button class="diary-toggle-btn" id="diary-toggle-btn">✏  今日の感想を書く</button>
+        <div class="diary-editor hidden" id="diary-editor">
+          <textarea class="diary-textarea" id="diary-textarea" maxlength="100" placeholder="この言葉を読んで感じたことを...（100文字以内）"></textarea>
+          <div class="diary-meta">
+            <span class="diary-char-count" id="diary-char-count">0 / 100</span>
+            <button class="diary-save-btn" id="diary-save-btn">保存</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 一覧タブ -->
@@ -150,7 +159,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 1.0.3</div>
+            <div class="settings-sublabel">Version 2.0.0</div>
           </div>
         </div>
         <div class="settings-row">
@@ -222,6 +231,30 @@
     <div class="modal-actions">
       <button class="btn-cancel" id="modal-cancel">キャンセル</button>
       <button class="btn-save" id="modal-save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 名言詳細・日記モーダル -->
+<div class="modal-overlay" id="detail-modal-overlay">
+  <div class="modal">
+    <div class="modal-title">名言の詳細</div>
+    <div class="detail-badge-row">
+      <span class="category-badge" id="detail-badge"></span>
+      <span class="detail-date" id="detail-date"></span>
+    </div>
+    <div class="detail-quote-text" id="detail-text"></div>
+    <div class="detail-quote-author" id="detail-author"></div>
+    <div class="form-group" style="margin-top:20px">
+      <label class="form-label">感想・日記</label>
+      <textarea class="form-textarea" id="detail-diary-textarea" maxlength="100" placeholder="この言葉への感想を...（100文字以内）"></textarea>
+      <div class="diary-char-row">
+        <span id="detail-diary-count">0</span> / 100
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="detail-cancel">閉じる</button>
+      <button class="btn-save" id="detail-save">感想を保存</button>
     </div>
   </div>
 </div>
