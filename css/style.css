@@ -70,6 +70,10 @@ main.no-scroll {
   overflow: hidden;
 }
 
+html.modal-open {
+  overflow: hidden;
+}
+
 #app {
   display: flex;
   flex-direction: column;
@@ -333,7 +337,7 @@ main {
   padding: 12px 16px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  font-size: 0.95rem;
+  font-size: 1rem;
   background: var(--card);
   color: var(--text);
   outline: none;
@@ -864,7 +868,7 @@ nav {
   padding: 12px 14px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--text);
   background: var(--bg);
   outline: none;
@@ -1075,7 +1079,7 @@ nav {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   color: rgba(255,248,230,0.9);
-  font-size: 0.9rem;
+  font-size: 1rem;
   padding: 10px 12px;
   resize: none;
   height: 80px;

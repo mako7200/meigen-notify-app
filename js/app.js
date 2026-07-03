@@ -456,10 +456,12 @@ function switchTab(tab) {
 // ── モーダル表示中の背面スクロール制御 ────────────────────
 function lockBodyScroll() {
   document.querySelector('main').classList.add('no-scroll');
+  document.documentElement.classList.add('modal-open');
 }
 
 function unlockBodyScroll() {
   document.querySelector('main').classList.remove('no-scroll');
+  document.documentElement.classList.remove('modal-open');
 }
 
 // ── 名言追加・編集モーダル ────────────────────────────────
