@@ -434,6 +434,7 @@ function bindEvents() {
 
 // ── タブ切り替え ──────────────────────────────────────────
 const TAB_ORDER = ['home', 'list', 'manage', 'settings'];
+const TAB_LABELS = { home: 'ホーム', list: '一覧', manage: '管理', settings: '設定' };
 
 function switchTab(tab) {
   const prevIndex = TAB_ORDER.indexOf(state.currentTab);
@@ -447,8 +448,18 @@ function switchTab(tab) {
   const newBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
   newBtn.classList.add('active', 'bounce');
   setTimeout(() => newBtn.classList.remove('bounce'), 350);
+  document.getElementById('header-title-text').textContent = TAB_LABELS[tab] || TAB_LABELS.home;
   if (tab === 'list') renderList();
   if (tab === 'manage') renderManage();
+}
+
+// ── モーダル表示中の背面スクロール制御 ────────────────────
+function lockBodyScroll() {
+  document.querySelector('main').classList.add('no-scroll');
+}
+
+function unlockBodyScroll() {
+  document.querySelector('main').classList.remove('no-scroll');
 }
 
 // ── 名言追加・編集モーダル ────────────────────────────────
@@ -461,6 +472,7 @@ function openAddModal() {
   document.getElementById('modal-author-bio').value = '';
   document.getElementById('modal-background').value = '';
   document.getElementById('modal-overlay').classList.add('open');
+  lockBodyScroll();
 }
 
 function openEditModal(id) {
@@ -474,11 +486,13 @@ function openEditModal(id) {
   document.getElementById('modal-author-bio').value = q.authorBio || '';
   document.getElementById('modal-background').value = q.background || '';
   document.getElementById('modal-overlay').classList.add('open');
+  lockBodyScroll();
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   state.editingId = null;
+  unlockBodyScroll();
 }
 
 function saveQuote() {
@@ -543,10 +557,12 @@ function openDetailModal(id) {
   document.getElementById('detail-diary-textarea').value = existing;
   document.getElementById('detail-diary-count').textContent = existing.length;
   document.getElementById('detail-modal-overlay').classList.add('open');
+  lockBodyScroll();
 }
 
 function closeDetailModal() {
   document.getElementById('detail-modal-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 
 function formatUnlockDate(dateStr) {
@@ -628,22 +644,22 @@ function registerServiceWorker() {
   navigator.serviceWorker.register('./service-worker.js', { scope: './', updateViaCache: 'none' })
     .then(reg => {
       navigator.serviceWorker.ready.then(() => updateNotificationSchedule());
-      if (reg.waiting) { showUpdateBanner(reg.waiting); return; }
+      if (reg.waiting) { showForceUpdateModal(reg.waiting); return; }
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(nw);
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) showForceUpdateModal(nw);
         });
       });
     })
     .catch(err => console.warn('SW登録失敗:', err));
 }
 
-function showUpdateBanner(worker) {
-  const banner = document.getElementById('update-banner');
-  banner.classList.add('show');
+function showForceUpdateModal(worker) {
+  const overlay = document.getElementById('update-modal-overlay');
+  overlay.classList.add('open');
+  lockBodyScroll();
   document.getElementById('update-btn').addEventListener('click', () => {
-    banner.classList.remove('show');
     worker.postMessage({ type: 'SKIP_WAITING' });
   });
 }
