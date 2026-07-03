@@ -200,6 +200,36 @@ main {
   letter-spacing: 0.05em;
 }
 
+.progress-block {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgba(255,248,230,0.7);
+  margin-bottom: 6px;
+}
+
+.progress-track {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #C8943B, #F0C878);
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+
 .quote-card {
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(20px);
@@ -1233,13 +1263,6 @@ nav {
 main::-webkit-scrollbar { display: none; }
 main { scrollbar-width: none; }
 
-/* 件数バッジ */
-.count-badge {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  text-align: right;
-  margin-bottom: 8px;
-}
 
 /* リップルエフェクト */
 .add-btn,

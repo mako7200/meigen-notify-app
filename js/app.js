@@ -193,7 +193,8 @@ function renderList() {
   });
 
   const totalLocked = state.quotes.length - unlockedIds.length;
-  document.getElementById('list-count').textContent = `${unlockedIds.length} / ${state.quotes.length} 件解放済み`;
+  document.getElementById('progress-count').textContent = `${unlockedIds.length} / ${state.quotes.length}`;
+  document.getElementById('progress-fill').style.width = state.quotes.length > 0 ? `${(unlockedIds.length / state.quotes.length) * 100}%` : '0%';
 
   if (unlockedQuotes.length === 0 && (state.listFavoriteOnly || search || state.listFilter !== 'all')) {
     document.getElementById('quote-list').innerHTML = state.listFavoriteOnly
