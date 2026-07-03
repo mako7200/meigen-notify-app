@@ -644,12 +644,22 @@ function registerServiceWorker() {
   navigator.serviceWorker.register('./service-worker.js', { scope: './', updateViaCache: 'none' })
     .then(reg => {
       navigator.serviceWorker.ready.then(() => updateNotificationSchedule());
-      if (reg.waiting) { showForceUpdateModal(reg.waiting); return; }
+      const checkWaiting = () => { if (reg.waiting) showForceUpdateModal(reg.waiting); };
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         nw.addEventListener('statechange', () => {
           if (nw.state === 'installed' && navigator.serviceWorker.controller) showForceUpdateModal(nw);
         });
+      });
+      checkWaiting();
+
+      // アプリを開き直す・フォアグラウンドに戻るたびに更新チェックをやり直す
+      // （一度見逃すと二度と検知できなくなる事態を防ぐため）
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          reg.update().catch(() => {});
+          checkWaiting();
+        }
       });
     })
     .catch(err => console.warn('SW登録失敗:', err));
@@ -657,6 +667,7 @@ function registerServiceWorker() {
 
 function showForceUpdateModal(worker) {
   const overlay = document.getElementById('update-modal-overlay');
+  if (overlay.classList.contains('open')) return;
   overlay.classList.add('open');
   lockBodyScroll();
   document.getElementById('update-btn').addEventListener('click', () => {
