@@ -3,7 +3,7 @@
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
-const QUOTES_DATA_VERSION = 2;
+const QUOTES_DATA_VERSION = 3;
 
 const Storage = {
   getQuotes() {
@@ -26,7 +26,8 @@ const Storage = {
       return {
         ...q,
         authorBio: q.authorBio || initial.authorBio || '',
-        background: q.background || initial.background || ''
+        background: q.background || initial.background || '',
+        rarity: q.rarity || initial.rarity
       };
     });
     this.saveQuotes(migrated);
@@ -141,8 +142,9 @@ function renderHome() {
   }
 
   const isFav = state.favorites.includes(q.id);
+  const isLegendary = q.rarity === 'legendary';
   document.getElementById('home-quote-area').innerHTML = `
-    <div class="quote-card" id="quote-card">
+    <div class="quote-card${isLegendary ? ' legendary' : ''}" id="quote-card">
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
       <div class="quote-author">
@@ -211,8 +213,9 @@ function renderList() {
   let html = unlockedQuotes.map(q => {
     const isFav = state.favorites.includes(q.id);
     const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
+    const isLegendary = q.rarity === 'legendary';
     return `
-      <div class="quote-list-item${isFav ? ' is-favorite' : ''}" data-id="${q.id}">
+      <div class="quote-list-item${isFav ? ' is-favorite' : ''}${isLegendary ? ' legendary' : ''}" data-id="${q.id}">
         <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
         <div class="quote-list-text">${escapeHtml(q.text)}</div>
         <div class="quote-list-meta">
