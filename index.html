@@ -36,14 +36,10 @@
     </div>
   </header>
 
-  <!-- 強制更新モーダル -->
-  <div id="update-modal-overlay" class="modal-overlay force-update-overlay">
-    <div class="modal force-update-modal">
-      <svg class="force-update-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-      <div class="modal-title">新しいバージョンがあります</div>
-      <p class="force-update-text">続けてご利用いただくには、アップデートが必要です。</p>
-      <button class="btn-save force-update-btn" id="update-btn">今すぐ更新する</button>
-    </div>
+  <!-- 更新バナー -->
+  <div id="update-banner" class="update-banner">
+    <span><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="15" height="15" style="vertical-align:-2px;margin-right:6px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>新しいバージョンがあります</span>
+    <button id="update-btn">更新する</button>
   </div>
 
   <!-- メインコンテンツ -->
@@ -172,7 +168,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.1.5</div>
+            <div class="settings-sublabel">Version 2.1.6</div>
           </div>
         </div>
         <div class="settings-row">

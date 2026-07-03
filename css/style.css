@@ -111,6 +111,36 @@ header .header-icon {
   font-size: 1.3rem;
 }
 
+/* 更新バナー */
+.update-banner {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #0d1117;
+  color: #4ade80;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.update-banner.show {
+  display: flex;
+}
+
+.update-banner button {
+  padding: 6px 16px;
+  background: #fff;
+  color: #0d1117;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* メインエリア */
 main {
   flex: 1;
@@ -842,35 +872,6 @@ nav {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* 強制更新モーダル */
-.force-update-overlay {
-  z-index: 300;
-  align-items: center;
-}
-
-.force-update-overlay .modal {
-  border-radius: 20px;
-  text-align: center;
-  animation: overlayIn 0.2s ease;
-}
-
-.force-update-icon {
-  width: 40px;
-  height: 40px;
-  color: var(--primary);
-  margin-bottom: 12px;
-}
-
-.force-update-text {
-  font-size: 0.88rem;
-  color: var(--text-sub);
-  line-height: 1.6;
-  margin: 10px 0 20px;
-}
-
-.force-update-btn {
-  width: 100%;
-}
 
 .modal-title {
   font-size: 1.1rem;

@@ -91,6 +91,11 @@ function init() {
   initInstallBanner();
   registerServiceWorker();
   checkMorningNotification();
+
+  if (localStorage.getItem('meigen_just_updated')) {
+    localStorage.removeItem('meigen_just_updated');
+    showToast('アップデートしました');
+  }
 }
 
 // ── 1日1言：今日の名言を取得（または新規割当） ───────────
@@ -642,16 +647,20 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) { refreshing = true; window.location.reload(); }
+    if (!refreshing) {
+      refreshing = true;
+      localStorage.setItem('meigen_just_updated', '1');
+      window.location.reload();
+    }
   });
   navigator.serviceWorker.register('./service-worker.js', { scope: './', updateViaCache: 'none' })
     .then(reg => {
       navigator.serviceWorker.ready.then(() => updateNotificationSchedule());
-      const checkWaiting = () => { if (reg.waiting) showForceUpdateModal(reg.waiting); };
+      const checkWaiting = () => { if (reg.waiting) showUpdateBanner(reg.waiting); };
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) showForceUpdateModal(nw);
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(nw);
         });
       });
       checkWaiting();
@@ -671,12 +680,12 @@ function registerServiceWorker() {
     .catch(err => console.warn('SW登録失敗:', err));
 }
 
-function showForceUpdateModal(worker) {
-  const overlay = document.getElementById('update-modal-overlay');
-  if (overlay.classList.contains('open')) return;
-  overlay.classList.add('open');
-  lockBodyScroll();
+function showUpdateBanner(worker) {
+  const banner = document.getElementById('update-banner');
+  if (banner.classList.contains('show')) return;
+  banner.classList.add('show');
   document.getElementById('update-btn').addEventListener('click', () => {
+    banner.classList.remove('show');
     worker.postMessage({ type: 'SKIP_WAITING' });
   });
 }
