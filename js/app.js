@@ -135,12 +135,15 @@ function init() {
 }
 
 // ── 1日1言：今日の名言を取得（または新規割当） ───────────
+let dailyQuoteJustRevealed = false;
+
 function getDailyQuote() {
   const today = new Date().toDateString();
   const record = Storage.getDailyRecord();
 
   // 今日の名言がすでに決まっている
   if (record && record.date === today) {
+    dailyQuoteJustRevealed = false;
     return state.quotes.find(q => q.id === record.quoteId) || state.quotes[0] || null;
   }
 
@@ -158,6 +161,7 @@ function getDailyQuote() {
   }
   Storage.saveDailyRecord({ date: today, quoteId: chosen.id });
 
+  dailyQuoteJustRevealed = true;
   return chosen;
 }
 
@@ -296,6 +300,7 @@ function renderManage() {
   const adminBar = document.getElementById('admin-bar');
 
   addBtn.style.display = state.isAdmin ? 'flex' : 'none';
+  document.getElementById('admin-next-quote-btn').style.display = state.isAdmin ? 'block' : 'none';
   adminBar.innerHTML = state.isAdmin
     ? `<div class="admin-status">管理者モード中</div>
        <button class="admin-lock-btn" id="admin-lock-btn" aria-label="ロックする">
@@ -327,7 +332,7 @@ function renderManage() {
     const rank = RANK_META[q.rarity];
     const cLabel = categoryLabel(q);
     return `
-    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}"${mythicStyleAttr(q)}>
+    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
       ${rankRingHtml(q.rarity)}
       ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
       <div class="manage-item-content">
@@ -443,9 +448,20 @@ function bindEvents() {
   // 管理：編集・削除（委譲）
   document.getElementById('manage-list').addEventListener('click', e => {
     const id = parseInt(e.target.dataset.id);
-    if (!id) return;
-    if (e.target.classList.contains('btn-edit')) openEditModal(id);
-    if (e.target.classList.contains('btn-delete')) deleteQuote(id);
+    if (id) {
+      if (e.target.classList.contains('btn-edit')) { openEditModal(id); return; }
+      if (e.target.classList.contains('btn-delete')) { deleteQuote(id); return; }
+    }
+    // カード本体タップ → 管理者テスト表示としてホームに反映
+    if (!state.isAdmin) return;
+    const card = e.target.closest('.manage-item');
+    if (!card || !card.dataset.id) return;
+    const quote = state.quotes.find(q => q.id === parseInt(card.dataset.id));
+    if (!quote) return;
+    state.currentQuote = quote;
+    renderHome();
+    switchTab('home');
+    showToast('ホームにテスト表示しました');
   });
 
   // 設定：通知トグル
@@ -529,6 +545,13 @@ function bindEvents() {
 
   // 通知テスト
   document.getElementById('test-notif-btn').addEventListener('click', testNotification);
+
+  // 管理者：次の名言（テスト表示、実際の解放状況には影響しない）
+  document.getElementById('admin-next-quote-btn').addEventListener('click', () => {
+    if (!state.isAdmin || state.quotes.length === 0) return;
+    state.currentQuote = state.quotes[Math.floor(Math.random() * state.quotes.length)];
+    renderHome();
+  });
 }
 
 // ── タブ切り替え ──────────────────────────────────────────
@@ -888,8 +911,17 @@ function initSplash() {
       splash.remove();
       const el = document.getElementById('quote-text');
       if (el && state.currentQuote) typewriter(el, state.currentQuote.text);
+      revealMythicIfNeeded();
     }
   });
+}
+
+// ── 超シークレットレア初解放時の演出 ──────────────────────
+function revealMythicIfNeeded() {
+  if (!dailyQuoteJustRevealed || !state.currentQuote || state.currentQuote.rarity !== 'mythic') return;
+  playMythicSound();
+  const card = document.getElementById('quote-card');
+  if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
 }
 
 // ── お気に入り ────────────────────────────────────────────
@@ -942,6 +974,87 @@ function playStarSound() {
       osc.start(t); osc.stop(t + dur + 0.01);
     });
   } catch (e) {}
+}
+
+function playMythicSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [
+      { freq: 523,  delay: 0,    dur: 0.18, vol: 0.22 },
+      { freq: 659,  delay: 0.09, dur: 0.18, vol: 0.22 },
+      { freq: 784,  delay: 0.18, dur: 0.18, vol: 0.22 },
+      { freq: 1047, delay: 0.27, dur: 0.22, vol: 0.24 },
+    ];
+    notes.forEach(({ freq, delay, dur, vol }) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'triangle'; osc.frequency.value = freq;
+      const t = audioCtx.currentTime + delay;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(vol, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.02);
+    });
+    // 最後にきらめくディチューンした高音を重ねる
+    [1568, 1580].forEach(freq => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t = audioCtx.currentTime + 0.36;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+      osc.start(t); osc.stop(t + 0.62);
+    });
+  } catch (e) {}
+}
+
+// ── 超シークレットレア解放バースト ────────────────────────
+function spawnMythicBurst(el, colors) {
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const palette = (colors && colors.length) ? colors : ['#F0C878', '#ffffff'];
+
+  // 画面フラッシュ
+  const flash = document.createElement('div');
+  flash.className = 'mythic-flash';
+  document.body.appendChild(flash);
+  flash.addEventListener('animationend', () => flash.remove());
+
+  // 衝撃波リング（2重）
+  for (let i = 0; i < 2; i++) {
+    const ring = document.createElement('div');
+    ring.className = 'mythic-shockwave';
+    ring.style.left = cx + 'px';
+    ring.style.top = cy + 'px';
+    ring.style.borderColor = palette[i % palette.length];
+    ring.style.boxShadow = `0 0 24px ${palette[i % palette.length]}`;
+    ring.style.animationDelay = (i * 0.1) + 's';
+    document.body.appendChild(ring);
+    ring.addEventListener('animationend', () => ring.remove());
+  }
+
+  // 太めのインパクトライン（少数・不均等な角度で鋭さを出す）
+  const count = 8;
+  for (let i = 0; i < count; i++) {
+    const color = palette[i % palette.length];
+    const ray = document.createElement('div');
+    ray.className = 'mythic-burst-ray';
+    ray.style.setProperty('--ra', ((360 / count) * i + (Math.random() * 14 - 7)) + 'deg');
+    ray.style.left = cx + 'px';
+    ray.style.top = cy + 'px';
+    ray.style.background = color;
+    ray.style.boxShadow = `0 0 10px ${color}`;
+    document.body.appendChild(ray);
+    ray.addEventListener('animationend', () => ray.remove());
+  }
+
+  // カード自体の衝撃演出
+  el.classList.add('mythic-punch');
+  el.addEventListener('animationend', () => el.classList.remove('mythic-punch'), { once: true });
 }
 
 // ── スターバーストエフェクト ──────────────────────────────

@@ -230,6 +230,24 @@ main {
   letter-spacing: 0.05em;
 }
 
+.admin-next-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 248, 230, 0.75);
+  font-size: 0.78rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.admin-next-btn:active {
+  opacity: 0.7;
+}
+
 .progress-block {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
@@ -1676,4 +1694,67 @@ main { scrollbar-width: none; }
 .card-fav-btn.star-flash,
 .list-fav-btn.star-flash {
   animation: starFlash 0.38s ease-out forwards;
+}
+
+/* 超シークレットレア初解放バースト */
+.mythic-flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 9996;
+  pointer-events: none;
+  animation: mythicFlash 0.35s ease-out forwards;
+}
+
+@keyframes mythicFlash {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+.mythic-shockwave {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border-radius: 50%;
+  border: 3px solid;
+  pointer-events: none;
+  z-index: 9997;
+  animation: mythicShockwave 0.9s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+@keyframes mythicShockwave {
+  0%   { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(9);   opacity: 0; }
+}
+
+.mythic-burst-ray {
+  position: fixed;
+  width: 4px;
+  height: 26px;
+  border-radius: 2px;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  z-index: 9998;
+  margin-left: -2px;
+  margin-top: -26px;
+  animation: mythicBurstRay 0.8s cubic-bezier(0.15, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes mythicBurstRay {
+  0%   { transform: rotate(var(--ra)) scaleY(1.6)  translateY(0px);   opacity: 1; }
+  100% { transform: rotate(var(--ra)) scaleY(0.15) translateY(-90px); opacity: 0; }
+}
+
+@keyframes mythicPunch {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.06); }
+  60%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.mythic-punch {
+  animation: mythicPunch 0.4s ease-out;
 }
