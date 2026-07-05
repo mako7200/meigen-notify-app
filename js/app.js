@@ -3,20 +3,35 @@
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
-const QUOTES_DATA_VERSION = 5;
+const QUOTES_DATA_VERSION = 6;
 
 const RANK_META = {
   rare:        { class: 'rank-rare',   label: 'RARE' },
   super_rare:  { class: 'rank-super',  label: 'SUPER RARE' },
   ultra_rare:  { class: 'rank-ultra',  label: 'ULTRA RARE' },
-  secret_rare: { class: 'rank-secret', label: 'SECRET' }
+  secret_rare: { class: 'rank-secret', label: 'SECRET' },
+  mythic:      { class: 'rank-mythic', label: 'MYTHIC' }
 };
+
+const MYTHIC_DEFAULT_COLORS = ['#C8943B', '#8B2CF5', '#1a0a2e'];
 
 function rankRingHtml(rarity) {
   if (rarity === 'super_rare') return '<span class="metallic-border-ring"></span>';
   if (rarity === 'ultra_rare') return '<span class="emerald-border-ring"></span>';
   if (rarity === 'secret_rare') return '<span class="secret-border-ring"></span><span class="secret-holo-bg"></span>';
+  if (rarity === 'mythic') return '<span class="mythic-border-ring"></span><span class="mythic-holo-bg"></span>';
   return '';
+}
+
+function categoryLabel(q) {
+  if (q.category === 'special') return '';
+  return CATEGORY_LABELS[q.category] || q.category;
+}
+
+function mythicStyleAttr(q) {
+  if (q.rarity !== 'mythic') return '';
+  const c = (q.themeColors && q.themeColors.length) ? q.themeColors : MYTHIC_DEFAULT_COLORS;
+  return ` style="--mc1:${c[0]};--mc2:${c[1]};--mc3:${c[2] || c[0]};"`;
 }
 
 const Storage = {
@@ -34,6 +49,7 @@ const Storage = {
     if (savedVersion >= QUOTES_DATA_VERSION) return quotes;
     const initialById = {};
     INITIAL_QUOTES.forEach(q => { initialById[q.id] = q; });
+    const existingIds = new Set(quotes.map(q => q.id));
     const migrated = quotes.map(q => {
       const initial = initialById[q.id];
       if (!initial) return q;
@@ -41,12 +57,16 @@ const Storage = {
         ...q,
         authorBio: q.authorBio || initial.authorBio || '',
         background: q.background || initial.background || '',
-        rarity: q.rarity === 'legendary' ? (initial.rarity || '') : (q.rarity || initial.rarity)
+        rarity: q.rarity === 'legendary' ? (initial.rarity || '') : (q.rarity || initial.rarity),
+        themeColors: q.themeColors || initial.themeColors
       };
     });
-    this.saveQuotes(migrated);
+    // 端末に保存済みのデータには存在しない、新しく追加された名言を補う
+    const newlyAdded = INITIAL_QUOTES.filter(q => !existingIds.has(q.id)).map(q => ({ ...q }));
+    const result = [...migrated, ...newlyAdded];
+    this.saveQuotes(result);
     localStorage.setItem('meigen_quotes_version', String(QUOTES_DATA_VERSION));
-    return migrated;
+    return result;
   },
   getSettings() {
     const saved = localStorage.getItem('meigen_settings');
@@ -158,13 +178,14 @@ function renderHome() {
 
   const isFav = state.favorites.includes(q.id);
   const rank = RANK_META[q.rarity];
+  const cLabel = categoryLabel(q);
   document.getElementById('home-quote-area').innerHTML = `
-    <div class="quote-card${rank ? ' ' + rank.class : ''}" id="quote-card">
+    <div class="quote-card${rank ? ' ' + rank.class : ''}" id="quote-card"${mythicStyleAttr(q)}>
       ${rankRingHtml(q.rarity)}
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
       <div class="quote-author">
-        <span class="category-badge">${CATEGORY_LABELS[q.category] || q.category}</span>
+        ${cLabel ? `<span class="category-badge">${cLabel}</span>` : '<span></span>'}
         <span class="quote-author-name">${escapeHtml(q.author)}</span>
       </div>
     </div>
@@ -234,15 +255,16 @@ function renderList() {
     const isFav = state.favorites.includes(q.id);
     const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
     const rank = RANK_META[q.rarity];
+    const cLabel = categoryLabel(q);
     return `
-      <div class="quote-list-item${isFav ? ' is-favorite' : ''}${rank ? ' ' + rank.class : ''}" data-id="${q.id}">
+      <div class="quote-list-item${isFav ? ' is-favorite' : ''}${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
         ${rankRingHtml(q.rarity)}
         ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
         <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
         <div class="quote-list-text">${escapeHtml(q.text)}</div>
         <div class="quote-list-meta">
           <span class="quote-list-author">${escapeHtml(q.author)}</span>
-          <span class="category-badge">${CATEGORY_LABELS[q.category] || q.category}</span>
+          ${cLabel ? `<span class="category-badge">${cLabel}</span>` : ''}
         </div>
         ${hasDiary ? '<div class="diary-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> コメントあり</div>' : ''}
       </div>
@@ -303,13 +325,14 @@ function renderManage() {
   document.getElementById('manage-list').innerHTML = quotes.map(q => {
     const isLocked = state.isAdmin && !unlockedIds.includes(q.id);
     const rank = RANK_META[q.rarity];
+    const cLabel = categoryLabel(q);
     return `
-    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}">
+    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}"${mythicStyleAttr(q)}>
       ${rankRingHtml(q.rarity)}
       ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
       <div class="manage-item-content">
         <div class="manage-item-text">${escapeHtml(q.text)}</div>
-        <div class="manage-item-author">${escapeHtml(q.author)}　<span style="font-weight:normal;">${CATEGORY_LABELS[q.category] || q.category}</span>${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
+        <div class="manage-item-author">${escapeHtml(q.author)}${cLabel ? `　<span style="font-weight:normal;">${cLabel}</span>` : ''}${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
       </div>
       ${state.isAdmin ? `
       <div class="manage-item-actions">
@@ -630,7 +653,10 @@ function openDetailModal(id) {
   const existing = state.diary[id] || '';
 
   document.getElementById('detail-modal-overlay').dataset.quoteId = id;
-  document.getElementById('detail-badge').textContent = CATEGORY_LABELS[q.category] || q.category;
+  const detailBadge = document.getElementById('detail-badge');
+  const cLabel = categoryLabel(q);
+  detailBadge.textContent = cLabel;
+  detailBadge.style.display = cLabel ? '' : 'none';
   document.getElementById('detail-text').textContent = q.text;
   document.getElementById('detail-author').textContent = `— ${q.author}`;
   document.getElementById('detail-date').textContent = unlockInfo ? formatUnlockDate(unlockInfo.date) : '';

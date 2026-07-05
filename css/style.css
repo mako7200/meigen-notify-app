@@ -303,7 +303,8 @@ main {
 .quote-list-item.rank-rare,
 .quote-list-item.rank-super,
 .quote-list-item.rank-ultra,
-.quote-list-item.rank-secret {
+.quote-list-item.rank-secret,
+.quote-list-item.rank-mythic {
   padding-top: 34px;
 }
 
@@ -490,6 +491,72 @@ main {
 @keyframes secretShine {
   0%, 40%  { opacity: 0; background-position: 0% 0%; }
   60%      { opacity: 1; background-position: 50% 50%; }
+  100%     { opacity: 0; background-position: 100% 100%; }
+}
+
+/* ランク演出：超絶シークレットレア（キャラごとの専用カラーを --mc1/--mc2/--mc3 で受け取る） */
+.mythic-border-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--border-angle), var(--mc1), var(--mc2), var(--mc3), var(--mc2), var(--mc1));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spinBorder 2.5s linear infinite;
+  pointer-events: none;
+}
+
+.mythic-holo-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, var(--mc1) 0%, var(--mc2) 35%, var(--mc3) 65%, var(--mc1) 100%);
+  background-size: 300% 300%;
+  opacity: 0.28;
+  animation: holoDrift 4s ease-in-out infinite;
+}
+
+.quote-list-item.rank-mythic,
+.quote-card.rank-mythic {
+  background: rgba(6, 6, 12, 0.97);
+  overflow: hidden;
+  animation: mythicPulse 2s ease-in-out infinite;
+}
+.quote-card.rank-mythic { border-left: none; }
+
+@keyframes mythicPulse {
+  0%, 100% { box-shadow: 0 0 14px var(--mc1); }
+  50%      { box-shadow: 0 0 30px var(--mc2); }
+}
+
+.rank-mythic .rank-badge {
+  background: linear-gradient(90deg, var(--mc1), var(--mc2));
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
+.quote-card.rank-mythic::after,
+.quote-list-item.rank-mythic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg,
+    transparent 20%,
+    var(--mc1) 42%,
+    #ffffff 50%,
+    var(--mc2) 58%,
+    transparent 80%);
+  background-size: 250% 250%;
+  opacity: 0;
+  animation: mythicShine 1.6s ease-in-out infinite;
+}
+
+@keyframes mythicShine {
+  0%, 30%  { opacity: 0; background-position: 0% 0%; }
+  50%      { opacity: 1; background-position: 50% 50%; }
   100%     { opacity: 0; background-position: 100% 100%; }
 }
 
