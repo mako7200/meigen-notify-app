@@ -221,6 +221,7 @@ function renderList() {
     const isLegendary = q.rarity === 'legendary';
     return `
       <div class="quote-list-item${isFav ? ' is-favorite' : ''}${isLegendary ? ' legendary' : ''}" data-id="${q.id}">
+        ${isFav ? '<span class="fav-border-ring"></span>' : ''}
         <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
         <div class="quote-list-text">${escapeHtml(q.text)}</div>
         <div class="quote-list-meta">
