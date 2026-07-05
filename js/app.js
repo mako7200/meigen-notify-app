@@ -3,7 +3,7 @@
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
-const QUOTES_DATA_VERSION = 3;
+const QUOTES_DATA_VERSION = 4;
 
 const Storage = {
   getQuotes() {

@@ -313,6 +313,7 @@ main {
 }
 
 .quote-list-item.legendary {
+  background: rgba(15, 10, 35, 0.95);
   overflow: hidden;
 }
 
@@ -467,7 +468,7 @@ main {
 }
 
 .quote-list-item {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 2px solid rgba(255, 255, 255, 0.12);
@@ -549,9 +550,9 @@ main {
   inherits: false;
 }
 
-.quote-list-item.is-favorite {
+.quote-list-item.is-favorite:not(.legendary) {
   border: 2px solid transparent;
-  background: linear-gradient(var(--card), var(--card)) padding-box,
+  background: linear-gradient(rgba(17, 12, 58, 0.95), rgba(17, 12, 58, 0.95)) padding-box,
               conic-gradient(from var(--border-angle), #C8943B, #F0C878, #fffde7, #F0C878, #C8943B) border-box;
   animation: spinBorder 3s linear infinite;
   box-shadow: 0 0 14px rgba(200, 148, 59, 0.3);
@@ -559,8 +560,11 @@ main {
 }
 
 .quote-list-item.is-favorite.legendary {
-  background: linear-gradient(rgba(255,255,255,0.07), rgba(255,255,255,0.07)) padding-box,
+  border: 2px solid transparent;
+  background: linear-gradient(rgba(15, 10, 35, 0.95), rgba(15, 10, 35, 0.95)) padding-box,
               conic-gradient(from var(--border-angle), #C8943B, #F0C878, #fffde7, #F0C878, #C8943B) border-box;
+  animation: spinBorder 3s linear infinite;
+  box-shadow: 0 0 14px rgba(200, 148, 59, 0.3);
 }
 
 @keyframes spinBorder {
