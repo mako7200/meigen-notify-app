@@ -67,7 +67,8 @@ let state = {
   favorites: [],
   listFavoriteOnly: false,
   unlocked: [],   // [{ id, date }, ...]
-  diary: {}       // { [quoteId]: "text" }
+  diary: {},      // { [quoteId]: "text" }
+  isAdmin: false  // セッション中のみ有効（再読み込みでリセット）
 };
 
 let typewriterTimer = null;
@@ -180,10 +181,14 @@ function renderDiarySection(quoteId) {
   const existing = state.diary[quoteId] || '';
 
   document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${existing ? 'コメントを編集する' : 'コメントを書く'}`;
-  const editor = document.getElementById('diary-editor');
-  editor.classList.add('hidden');
   document.getElementById('diary-textarea').value = existing;
   document.getElementById('diary-char-count').textContent = `${existing.length} / 100`;
+
+  const q = state.quotes.find(q => q.id === quoteId);
+  if (q) {
+    document.getElementById('diary-quote-preview-text').textContent = q.text;
+    document.getElementById('diary-quote-preview-author').textContent = `— ${q.author}`;
+  }
 }
 
 // ── 一覧タブ描画 ──────────────────────────────────────────
@@ -248,25 +253,79 @@ function renderList() {
 
 // ── 管理タブ描画 ──────────────────────────────────────────
 function renderManage() {
+  const addBtn = document.getElementById('add-quote-btn');
+  const adminBar = document.getElementById('admin-bar');
+
+  addBtn.style.display = state.isAdmin ? 'flex' : 'none';
+  adminBar.innerHTML = state.isAdmin
+    ? `<div class="admin-status">管理者モード中</div>
+       <button class="admin-lock-btn" id="admin-lock-btn" aria-label="ロックする">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 017.75-1.5"/></svg>
+       </button>`
+    : `<button class="admin-lock-btn" id="admin-lock-btn" aria-label="管理者モードにする">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+       </button>`;
+  document.getElementById('admin-lock-btn').addEventListener('click', () => {
+    if (state.isAdmin) {
+      state.isAdmin = false;
+      renderManage();
+      showToast('管理者モードを終了しました');
+    } else {
+      openAdminPinModal();
+    }
+  });
+
   const unlockedIds = state.unlocked.map(u => u.id);
-  const quotes = state.quotes.filter(q => unlockedIds.includes(q.id));
+  const quotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
+
   if (quotes.length === 0) {
     document.getElementById('manage-list').innerHTML =
       '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
     return;
   }
-  document.getElementById('manage-list').innerHTML = quotes.map(q => `
+  document.getElementById('manage-list').innerHTML = quotes.map(q => {
+    const isLocked = state.isAdmin && !unlockedIds.includes(q.id);
+    return `
     <div class="manage-item">
       <div class="manage-item-content">
         <div class="manage-item-text">${escapeHtml(q.text)}</div>
-        <div class="manage-item-author">${escapeHtml(q.author)}　<span style="font-weight:normal;color:var(--text-light)">${CATEGORY_LABELS[q.category] || q.category}</span></div>
+        <div class="manage-item-author">${escapeHtml(q.author)}　<span style="font-weight:normal;color:var(--text-light)">${CATEGORY_LABELS[q.category] || q.category}</span>${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
       </div>
+      ${state.isAdmin ? `
       <div class="manage-item-actions">
         <button class="btn-edit" data-id="${q.id}">編集</button>
         <button class="btn-delete" data-id="${q.id}">削除</button>
-      </div>
+      </div>` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
+}
+
+// ── 管理者PINモーダル ────────────────────────────────────
+const ADMIN_PIN = '01680';
+
+function openAdminPinModal() {
+  document.getElementById('admin-pin-input').value = '';
+  document.getElementById('admin-pin-overlay').classList.add('open');
+  lockBodyScroll();
+  setTimeout(() => document.getElementById('admin-pin-input').focus(), 50);
+}
+
+function closeAdminPinModal() {
+  document.getElementById('admin-pin-overlay').classList.remove('open');
+  unlockBodyScroll();
+}
+
+function submitAdminPin() {
+  const value = document.getElementById('admin-pin-input').value.trim();
+  if (value === ADMIN_PIN) {
+    state.isAdmin = true;
+    closeAdminPinModal();
+    renderManage();
+    showToast('管理者モードにしました');
+  } else {
+    showToast('PINコードが違います');
+  }
 }
 
 // ── 設定タブ描画 ──────────────────────────────────────────
@@ -387,13 +446,25 @@ function bindEvents() {
     if (e.target === document.getElementById('modal-overlay')) closeModal();
   });
 
-  // 日記：トグルボタン
+  // 管理者PINモーダル
+  document.getElementById('admin-pin-cancel').addEventListener('click', closeAdminPinModal);
+  document.getElementById('admin-pin-submit').addEventListener('click', submitAdminPin);
+  document.getElementById('admin-pin-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('admin-pin-overlay')) closeAdminPinModal();
+  });
+  document.getElementById('admin-pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitAdminPin();
+  });
+
+  // 日記：トグルボタン（コメントモーダルを開く）
   document.getElementById('diary-toggle-btn').addEventListener('click', () => {
-    const editor = document.getElementById('diary-editor');
-    editor.classList.toggle('hidden');
-    if (!editor.classList.contains('hidden')) {
-      document.getElementById('diary-textarea').focus();
-    }
+    document.getElementById('diary-modal-overlay').classList.add('open');
+    lockBodyScroll();
+    setTimeout(() => document.getElementById('diary-textarea').focus(), 150);
+  });
+
+  document.getElementById('diary-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('diary-modal-overlay')) saveAndCloseDiary();
   });
 
   // 日記：文字数カウント
@@ -401,38 +472,14 @@ function bindEvents() {
     document.getElementById('diary-char-count').textContent = `${e.target.value.length} / 100`;
   });
 
-  // 日記：閉じるボタン（未保存の入力は破棄）
-  document.getElementById('diary-cancel-btn').addEventListener('click', () => {
-    if (!state.currentQuote) return;
-    const existing = state.diary[state.currentQuote.id] || '';
-    document.getElementById('diary-textarea').value = existing;
-    document.getElementById('diary-char-count').textContent = `${existing.length} / 100`;
-    document.getElementById('diary-editor').classList.add('hidden');
-  });
+  // 日記：閉じる（＝自動保存）
+  document.getElementById('diary-save-btn').addEventListener('click', saveAndCloseDiary);
 
-  // 日記：保存ボタン
-  document.getElementById('diary-save-btn').addEventListener('click', () => {
-    if (!state.currentQuote) return;
-    const text = document.getElementById('diary-textarea').value.trim();
-    saveDiaryEntry(state.currentQuote.id, text);
-    document.getElementById('diary-editor').classList.add('hidden');
-    document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${text ? 'コメントを編集する' : 'コメントを書く'}`;
-    showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
-  });
-
-  // 詳細モーダル：閉じる・保存
+  // 詳細モーダル：閉じる（＝自動保存）
   document.getElementById('detail-modal-overlay').addEventListener('click', e => {
-    if (e.target === document.getElementById('detail-modal-overlay')) closeDetailModal();
+    if (e.target === document.getElementById('detail-modal-overlay')) saveAndCloseDetail();
   });
-  document.getElementById('detail-cancel').addEventListener('click', closeDetailModal);
-  document.getElementById('detail-save').addEventListener('click', () => {
-    const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
-    const text = document.getElementById('detail-diary-textarea').value.trim();
-    saveDiaryEntry(id, text);
-    renderList();
-    closeDetailModal();
-    showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
-  });
+  document.getElementById('detail-close-btn').addEventListener('click', saveAndCloseDetail);
   document.getElementById('detail-diary-textarea').addEventListener('input', e => {
     document.getElementById('detail-diary-count').textContent = e.target.value.length;
   });
@@ -471,6 +518,22 @@ function lockBodyScroll() {
 function unlockBodyScroll() {
   document.querySelector('main').classList.remove('no-scroll');
   document.documentElement.classList.remove('modal-open');
+}
+
+function closeDiaryModal() {
+  document.getElementById('diary-modal-overlay').classList.remove('open');
+  unlockBodyScroll();
+}
+
+function saveAndCloseDiary() {
+  if (!state.currentQuote) { closeDiaryModal(); return; }
+  const text = document.getElementById('diary-textarea').value.trim();
+  const existing = state.diary[state.currentQuote.id] || '';
+  closeDiaryModal();
+  if (text === existing) return;
+  saveDiaryEntry(state.currentQuote.id, text);
+  document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${text ? 'コメントを編集する' : 'コメントを書く'}`;
+  showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
 }
 
 // ── 名言追加・編集モーダル ────────────────────────────────
@@ -574,6 +637,17 @@ function openDetailModal(id) {
 function closeDetailModal() {
   document.getElementById('detail-modal-overlay').classList.remove('open');
   unlockBodyScroll();
+}
+
+function saveAndCloseDetail() {
+  const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
+  const text = document.getElementById('detail-diary-textarea').value.trim();
+  const existing = state.diary[id] || '';
+  closeDetailModal();
+  if (text === existing) return;
+  saveDiaryEntry(id, text);
+  renderList();
+  showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
 }
 
 function formatUnlockDate(dateStr) {
@@ -708,7 +782,7 @@ function spawnRipple(btn, clientX, clientY) {
 
 function initRipple() {
   document.addEventListener('pointerdown', e => {
-    const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .diary-save-btn, .diary-cancel-btn, .detail-save-btn');
+    const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .admin-lock-btn');
     if (!btn) return;
     spawnRipple(btn, e.clientX, e.clientY);
   });

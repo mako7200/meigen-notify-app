@@ -467,18 +467,20 @@ main {
 }
 
 .quote-list-item {
-  background: var(--card);
-  border: 2px solid var(--border);
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   padding: 14px 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
   position: relative;
 }
 
 .quote-list-text {
   font-size: 0.9rem;
   line-height: 1.7;
-  color: var(--text);
+  color: rgba(255, 248, 230, 0.95);
   margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -496,7 +498,7 @@ main {
 
 .quote-list-author {
   font-size: 0.8rem;
-  color: var(--text-sub);
+  color: rgba(255, 248, 230, 0.65);
   font-weight: bold;
 }
 
@@ -556,6 +558,11 @@ main {
   overflow: hidden;
 }
 
+.quote-list-item.is-favorite.legendary {
+  background: linear-gradient(rgba(255,255,255,0.07), rgba(255,255,255,0.07)) padding-box,
+              conic-gradient(from var(--border-angle), #C8943B, #F0C878, #fffde7, #F0C878, #C8943B) border-box;
+}
+
 @keyframes spinBorder {
   to { --border-angle: 360deg; }
 }
@@ -588,6 +595,7 @@ main {
   cursor: pointer;
   padding: 4px;
   line-height: 1;
+  color: rgba(255, 255, 255, 0.45);
   transition: transform 0.15s, color 0.2s;
   display: inline-flex;
   align-items: center;
@@ -627,6 +635,45 @@ main {
 }
 
 .add-btn:active { background: var(--primary-dark); }
+
+.admin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.admin-status {
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: var(--primary-light);
+}
+
+.admin-lock-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius);
+  color: rgba(255,248,230,0.85);
+  cursor: pointer;
+}
+
+.admin-lock-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.locked-tag {
+  font-size: 0.72rem;
+  color: var(--text-light);
+  font-weight: normal;
+}
 
 .manage-list {
   display: flex;
@@ -902,6 +949,23 @@ nav {
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* 画面中央に表示するモーダル（名言の詳細など） */
+.centered-modal {
+  align-items: center;
+}
+
+.centered-modal-box {
+  border-radius: 20px;
+  padding: 24px 20px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: centeredModalIn 0.22s ease;
+}
+
+@keyframes centeredModalIn {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
 
 .modal-title {
   font-size: 1.1rem;
@@ -1124,26 +1188,67 @@ nav {
   flex-shrink: 0;
 }
 
-.diary-editor {
-  margin-top: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: var(--radius);
-  padding: 12px;
+.diary-modal-box {
+  width: 340px;
+  max-width: 85vw;
+  padding-top: 60px;
+  padding-bottom: 44px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
 }
 
-.diary-editor.hidden { display: none; }
+.diary-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.diary-quote-preview {
+  font-size: 0.8rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: rgba(255, 248, 230, 0.6);
+  border-left: 2px solid var(--primary);
+  padding-left: 10px;
+  padding-right: 26px;
+  margin-bottom: 34px;
+}
+
+.diary-quote-preview-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.diary-quote-preview-author {
+  margin-top: 4px;
+  text-align: right;
+  font-size: 0.75rem;
+}
 
 .diary-textarea {
   width: 100%;
   background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  color: rgba(255,248,230,0.9);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: rgba(255,248,230,0.95);
   font-size: 1rem;
-  padding: 10px 12px;
+  padding: 12px;
   resize: none;
-  height: 80px;
+  height: 140px;
   font-family: inherit;
   line-height: 1.6;
   outline: none;
@@ -1154,46 +1259,13 @@ nav {
 .diary-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: 8px;
 }
 
 .diary-char-count {
   font-size: 0.72rem;
-  color: rgba(255,255,255,0.35);
-}
-
-.diary-meta-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.diary-cancel-btn {
-  padding: 6px 18px;
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,248,230,0.8);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  cursor: pointer;
-  font-family: inherit;
-  position: relative;
-  overflow: hidden;
-}
-
-.diary-save-btn {
-  padding: 6px 18px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  cursor: pointer;
-  font-family: inherit;
-  position: relative;
-  overflow: hidden;
+  color: rgba(255,255,255,0.4);
 }
 
 /* ── 一覧：コメントありバッジ ────────────────────────────── */
@@ -1233,6 +1305,40 @@ nav {
 }
 
 /* ── 詳細モーダル ────────────────────────────────────── */
+.detail-modal-box {
+  width: 340px;
+  max-width: 85vw;
+  padding-top: 40px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.detail-modal-box .modal-title { color: rgba(255,248,230,0.95); }
+.detail-modal-box .detail-date { color: rgba(255,255,255,0.4); }
+.detail-modal-box .detail-quote-text { color: rgba(255,248,230,0.95); }
+.detail-modal-box .detail-quote-author { color: rgba(255,248,230,0.7); }
+
+.detail-modal-box .detail-info-block {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.detail-modal-box .detail-info-title { color: var(--primary-light); }
+.detail-modal-box .detail-info-text { color: rgba(255,248,230,0.7); }
+.detail-modal-box .form-label { color: rgba(255,248,230,0.8); }
+
+.detail-modal-box .form-textarea {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,248,230,0.95);
+}
+
+.detail-modal-box .diary-char-row { color: rgba(255,255,255,0.4); }
+
 .detail-badge-row {
   display: flex;
   align-items: center;
@@ -1301,7 +1407,8 @@ main { scrollbar-width: none; }
 .btn-save,
 .btn-cancel,
 .btn-edit,
-.btn-delete {
+.btn-delete,
+.admin-lock-btn {
   position: relative;
   overflow: hidden;
 }
