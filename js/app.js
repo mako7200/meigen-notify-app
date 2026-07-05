@@ -3,7 +3,21 @@
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
-const QUOTES_DATA_VERSION = 4;
+const QUOTES_DATA_VERSION = 5;
+
+const RANK_META = {
+  rare:        { class: 'rank-rare',   label: 'RARE' },
+  super_rare:  { class: 'rank-super',  label: 'SUPER RARE' },
+  ultra_rare:  { class: 'rank-ultra',  label: 'ULTRA RARE' },
+  secret_rare: { class: 'rank-secret', label: 'SECRET' }
+};
+
+function rankRingHtml(rarity) {
+  if (rarity === 'super_rare') return '<span class="metallic-border-ring"></span>';
+  if (rarity === 'ultra_rare') return '<span class="emerald-border-ring"></span>';
+  if (rarity === 'secret_rare') return '<span class="secret-border-ring"></span><span class="secret-holo-bg"></span>';
+  return '';
+}
 
 const Storage = {
   getQuotes() {
@@ -27,7 +41,7 @@ const Storage = {
         ...q,
         authorBio: q.authorBio || initial.authorBio || '',
         background: q.background || initial.background || '',
-        rarity: q.rarity || initial.rarity
+        rarity: q.rarity === 'legendary' ? (initial.rarity || '') : (q.rarity || initial.rarity)
       };
     });
     this.saveQuotes(migrated);
@@ -143,9 +157,10 @@ function renderHome() {
   }
 
   const isFav = state.favorites.includes(q.id);
-  const isLegendary = q.rarity === 'legendary';
+  const rank = RANK_META[q.rarity];
   document.getElementById('home-quote-area').innerHTML = `
-    <div class="quote-card${isLegendary ? ' legendary' : ''}" id="quote-card">
+    <div class="quote-card${rank ? ' ' + rank.class : ''}" id="quote-card">
+      ${rankRingHtml(q.rarity)}
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
       <div class="quote-author">
@@ -218,10 +233,11 @@ function renderList() {
   let html = unlockedQuotes.map(q => {
     const isFav = state.favorites.includes(q.id);
     const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
-    const isLegendary = q.rarity === 'legendary';
+    const rank = RANK_META[q.rarity];
     return `
-      <div class="quote-list-item${isFav ? ' is-favorite' : ''}${isLegendary ? ' legendary' : ''}" data-id="${q.id}">
-        ${isFav ? '<span class="fav-border-ring"></span>' : ''}
+      <div class="quote-list-item${isFav ? ' is-favorite' : ''}${rank ? ' ' + rank.class : ''}" data-id="${q.id}">
+        ${rankRingHtml(q.rarity)}
+        ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
         <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
         <div class="quote-list-text">${escapeHtml(q.text)}</div>
         <div class="quote-list-meta">
@@ -286,11 +302,14 @@ function renderManage() {
   }
   document.getElementById('manage-list').innerHTML = quotes.map(q => {
     const isLocked = state.isAdmin && !unlockedIds.includes(q.id);
+    const rank = RANK_META[q.rarity];
     return `
-    <div class="manage-item">
+    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}">
+      ${rankRingHtml(q.rarity)}
+      ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
       <div class="manage-item-content">
         <div class="manage-item-text">${escapeHtml(q.text)}</div>
-        <div class="manage-item-author">${escapeHtml(q.author)}　<span style="font-weight:normal;color:var(--text-light)">${CATEGORY_LABELS[q.category] || q.category}</span>${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
+        <div class="manage-item-author">${escapeHtml(q.author)}　<span style="font-weight:normal;">${CATEGORY_LABELS[q.category] || q.category}</span>${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
       </div>
       ${state.isAdmin ? `
       <div class="manage-item-actions">
@@ -546,6 +565,7 @@ function openAddModal() {
   document.getElementById('modal-category').value = 'historical';
   document.getElementById('modal-author-bio').value = '';
   document.getElementById('modal-background').value = '';
+  document.getElementById('modal-rarity').value = '';
   document.getElementById('modal-overlay').classList.add('open');
   lockBodyScroll();
 }
@@ -560,6 +580,7 @@ function openEditModal(id) {
   document.getElementById('modal-category').value = q.category;
   document.getElementById('modal-author-bio').value = q.authorBio || '';
   document.getElementById('modal-background').value = q.background || '';
+  document.getElementById('modal-rarity').value = q.rarity || '';
   document.getElementById('modal-overlay').classList.add('open');
   lockBodyScroll();
 }
@@ -576,13 +597,14 @@ function saveQuote() {
   const category = document.getElementById('modal-category').value;
   const authorBio = document.getElementById('modal-author-bio').value.trim();
   const background = document.getElementById('modal-background').value.trim();
+  const rarity = document.getElementById('modal-rarity').value;
   if (!text || !author) { showToast('名言と著者名を入力してください'); return; }
   if (state.editingId) {
-    state.quotes = state.quotes.map(q => q.id === state.editingId ? { ...q, text, author, category, authorBio, background } : q);
+    state.quotes = state.quotes.map(q => q.id === state.editingId ? { ...q, text, author, category, authorBio, background, rarity } : q);
     showToast('名言を更新しました');
   } else {
     const newId = state.quotes.length > 0 ? Math.max(...state.quotes.map(q => q.id)) + 1 : 1;
-    state.quotes.push({ id: newId, text, author, category, authorBio, background });
+    state.quotes.push({ id: newId, text, author, category, authorBio, background, rarity });
     showToast('名言を追加しました');
   }
   Storage.saveQuotes(state.quotes);

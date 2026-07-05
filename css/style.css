@@ -286,35 +286,211 @@ main {
   opacity: 0.35;
 }
 
-/* レア演出（虹色シャイン）：5秒に1回、一瞬だけ光る */
-.quote-card.legendary::after,
-.quote-list-item.legendary::after {
+/* ランクバッジ（一覧カード左上） */
+.rank-badge {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 0.62rem;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 20px;
+  z-index: 2;
+  letter-spacing: 0.03em;
+}
+
+/* バッジと本文が重ならないよう、ランク付きカードだけ上部に余白を追加 */
+.quote-list-item.rank-rare,
+.quote-list-item.rank-super,
+.quote-list-item.rank-ultra,
+.quote-list-item.rank-secret {
+  padding-top: 34px;
+}
+
+/* ランク演出：レア（銀色シャインが5秒に1回、一瞬だけ光る） */
+.quote-card.rank-rare::after,
+.quote-list-item.rank-rare::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: linear-gradient(120deg,
     transparent 30%,
-    rgba(255,90,90,0.4) 40%,
-    rgba(255,210,70,0.4) 45%,
-    rgba(130,255,160,0.4) 50%,
-    rgba(90,190,255,0.4) 55%,
-    rgba(210,130,255,0.4) 60%,
+    rgba(200,205,215,0.45) 42%,
+    rgba(255,255,255,0.6) 50%,
+    rgba(200,205,215,0.45) 58%,
     transparent 70%);
   background-size: 250% 250%;
   opacity: 0;
-  animation: legendaryShine 5s ease-in-out infinite;
+  animation: rareShine 5s ease-in-out infinite;
 }
 
-@keyframes legendaryShine {
+@keyframes rareShine {
   0%, 85%  { opacity: 0; background-position: 0% 0%; }
   90%      { opacity: 1; background-position: 50% 50%; }
   100%     { opacity: 0; background-position: 100% 100%; }
 }
 
-.quote-list-item.legendary {
+.quote-list-item.rank-rare {
   background: rgba(15, 10, 35, 0.95);
   overflow: hidden;
+}
+
+.rank-rare .rank-badge { background: rgba(180,185,195,0.25); color: #E4E7EC; border: 1px solid rgba(228,231,236,0.45); }
+
+/* ランク演出：スーパーレア（金〜銀の縁取りリングが常時回転） */
+.metallic-border-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--border-angle), #C8943B, #E8E8E8, #F0C878, #fffde7, #C0C0C0, #C8943B);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spinBorder 4s linear infinite;
+  pointer-events: none;
+}
+
+.quote-list-item.rank-super {
+  background: rgba(20, 14, 8, 0.95);
+  overflow: hidden;
+}
+.quote-card.rank-super { border-left: none; overflow: hidden; }
+
+.rank-super .rank-badge { background: rgba(200,148,59,0.3); color: #fffde7; border: 1px solid rgba(255,253,231,0.5); }
+
+.quote-card.rank-super::after,
+.quote-list-item.rank-super::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg,
+    transparent 25%,
+    rgba(255,215,120,0.5) 40%,
+    rgba(255,255,255,0.65) 50%,
+    rgba(255,215,120,0.5) 60%,
+    transparent 75%);
+  background-size: 250% 250%;
+  opacity: 0;
+  animation: ultraShine 2.4s ease-in-out infinite;
+}
+
+@keyframes ultraShine {
+  0%, 55%  { opacity: 0; background-position: 0% 0%; }
+  70%      { opacity: 1; background-position: 50% 50%; }
+  100%     { opacity: 0; background-position: 100% 100%; }
+}
+
+/* ランク演出：ウルトラレア（エメラルド×金の縁取りリングが常時回転） */
+.emerald-border-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--border-angle), #012b1c, #00c853, #d4af37, #00c853, #012b1c);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spinBorder 4s linear infinite;
+  pointer-events: none;
+}
+
+.quote-list-item.rank-ultra {
+  background: rgba(6, 20, 14, 0.95);
+  overflow: hidden;
+}
+.quote-card.rank-ultra { border-left: none; overflow: hidden; }
+
+.rank-ultra .rank-badge { background: rgba(0,200,83,0.22); color: #9CFFC7; border: 1px solid rgba(212,175,55,0.5); }
+
+.quote-card.rank-ultra::after,
+.quote-list-item.rank-ultra::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg,
+    transparent 25%,
+    rgba(0,200,83,0.5) 40%,
+    rgba(212,175,55,0.6) 50%,
+    rgba(0,200,83,0.5) 60%,
+    transparent 75%);
+  background-size: 250% 250%;
+  opacity: 0;
+  animation: ultraShine 2.4s ease-in-out infinite;
+}
+
+/* ランク演出：シークレットレア（背景が常時ホログラフィックに揺らめき＋虹色の縁取りリング） */
+.secret-border-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--border-angle), #ff5a5a, #ffd246, #82ffa0, #5abeff, #d282ff, #ff5a5a);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spinBorder 3s linear infinite;
+  pointer-events: none;
+}
+
+.secret-holo-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg,
+    rgba(255,90,90,0.22) 0%,
+    rgba(255,210,70,0.22) 20%,
+    rgba(130,255,160,0.22) 40%,
+    rgba(90,190,255,0.22) 60%,
+    rgba(210,130,255,0.22) 80%,
+    rgba(255,90,90,0.22) 100%);
+  background-size: 300% 300%;
+  animation: holoDrift 5s ease-in-out infinite;
+}
+
+@keyframes holoDrift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.quote-list-item.rank-secret,
+.quote-card.rank-secret {
+  background: rgba(10, 6, 20, 0.95);
+  overflow: hidden;
+}
+.quote-card.rank-secret { border-left: none; }
+
+.rank-secret .rank-badge {
+  background: linear-gradient(90deg, #ff5a5a, #ffd246, #82ffa0, #5abeff, #d282ff);
+  color: #1a0a2e;
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
+.quote-card.rank-secret::after,
+.quote-list-item.rank-secret::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg,
+    transparent 25%,
+    rgba(255,255,255,0.5) 45%,
+    rgba(255,255,255,0.7) 50%,
+    rgba(255,255,255,0.5) 55%,
+    transparent 75%);
+  background-size: 250% 250%;
+  opacity: 0;
+  animation: secretShine 2s ease-in-out infinite;
+}
+
+@keyframes secretShine {
+  0%, 40%  { opacity: 0; background-position: 0% 0%; }
+  60%      { opacity: 1; background-position: 50% 50%; }
+  100%     { opacity: 0; background-position: 100% 100%; }
 }
 
 .quote-text {
@@ -559,20 +735,6 @@ main {
   to { --border-angle: 360deg; }
 }
 
-/* お気に入りの金の縁取り（背景色には触れず、リング専用の要素を重ねる） */
-.fav-border-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 10px;
-  padding: 2px;
-  background: conic-gradient(from var(--border-angle), #C8943B, #F0C878, #fffde7, #F0C878, #C8943B);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: spinBorder 3s linear infinite;
-  pointer-events: none;
-}
-
 .list-fav-btn {
   position: absolute;
   top: 10px;
@@ -659,7 +821,7 @@ main {
 
 .locked-tag {
   font-size: 0.72rem;
-  color: var(--text-light);
+  color: rgba(255, 248, 230, 0.5);
   font-weight: normal;
 }
 
@@ -670,24 +832,21 @@ main {
 }
 
 .manage-item {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
 .manage-item-content {
   flex: 1;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .manage-item-text {
   font-size: 0.85rem;
-  color: var(--text);
+  color: rgba(255, 248, 230, 0.95);
   line-height: 1.6;
   margin-bottom: 4px;
   display: -webkit-box;
@@ -698,11 +857,13 @@ main {
 
 .manage-item-author {
   font-size: 0.75rem;
-  color: var(--text-sub);
+  color: rgba(255, 248, 230, 0.65);
   font-weight: bold;
 }
 
 .manage-item-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 6px;
   flex-shrink: 0;
