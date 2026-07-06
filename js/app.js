@@ -263,7 +263,13 @@ const Storage = {
   saveUnlocked(list) { localStorage.setItem('meigen_unlocked', JSON.stringify(list)); },
   // 日記 { [quoteId]: "text" }
   getDiary() { const s = localStorage.getItem('meigen_diary'); return s ? JSON.parse(s) : {}; },
-  saveDiary(diary) { localStorage.setItem('meigen_diary', JSON.stringify(diary)); }
+  saveDiary(diary) { localStorage.setItem('meigen_diary', JSON.stringify(diary)); },
+  // 連続ログイン { count, lastDate }
+  getStreak() { const s = localStorage.getItem('meigen_streak'); return s ? JSON.parse(s) : { count: 0, lastDate: '' }; },
+  saveStreak(streak) { localStorage.setItem('meigen_streak', JSON.stringify(streak)); },
+  // ログインボーナス { date, quoteId }
+  getBonusRecord() { const s = localStorage.getItem('meigen_bonus'); return s ? JSON.parse(s) : null; },
+  saveBonusRecord(r) { localStorage.setItem('meigen_bonus', JSON.stringify(r)); }
 };
 
 // ── アプリ状態 ────────────────────────────────────────────
@@ -285,7 +291,8 @@ let state = {
   listFavoriteOnly: false,
   unlocked: [],   // [{ id, date }, ...]
   diary: {},      // { [quoteId]: "text" }
-  isAdmin: false  // セッション中のみ有効（再読み込みでリセット）
+  isAdmin: false, // セッション中のみ有効（再読み込みでリセット）
+  streak: 0
 };
 
 let typewriterTimer = null;
@@ -298,6 +305,7 @@ function init() {
   state.favorites = Storage.getFavorites();
   state.unlocked  = Storage.getUnlocked();
   state.diary     = Storage.getDiary();
+  updateStreak();
   state.currentQuote = getDailyQuote();
 
   applyTheme(state.settings.theme);
@@ -349,6 +357,92 @@ function getDailyQuote() {
   return chosen;
 }
 
+// ── 連続ログインボーナス ──────────────────────────────────
+const BONUS_INTERVAL = 3;
+
+function updateStreak() {
+  const today = new Date().toDateString();
+  const streak = Storage.getStreak();
+  if (streak.lastDate !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    streak.count = (streak.lastDate === yesterday) ? streak.count + 1 : 1;
+    streak.lastDate = today;
+    Storage.saveStreak(streak);
+  }
+  state.streak = streak.count;
+}
+
+function isBonusDay() {
+  return state.streak > 0 && state.streak % BONUS_INTERVAL === 0;
+}
+
+function getTodaysBonusRecord() {
+  const today = new Date().toDateString();
+  const record = Storage.getBonusRecord();
+  return (record && record.date === today) ? record : null;
+}
+
+function claimBonusQuote() {
+  const today = new Date().toDateString();
+  const unlockedIds = state.unlocked.map(u => u.id);
+  let pool = state.quotes.filter(q => !unlockedIds.includes(q.id));
+  if (pool.length === 0) pool = [...state.quotes]; // 全部見たらリセット
+
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  if (!state.unlocked.find(u => u.id === chosen.id)) {
+    state.unlocked.push({ id: chosen.id, date: today });
+    Storage.saveUnlocked(state.unlocked);
+  }
+  Storage.saveBonusRecord({ date: today, quoteId: chosen.id });
+  return chosen;
+}
+
+function renderStreakIndicator() {
+  const el = document.getElementById('streak-indicator');
+  if (!el) return;
+  if (state.streak <= 0) { el.innerHTML = ''; return; }
+
+  let text = `${state.streak}日連続ログイン中`;
+  if (isBonusDay()) {
+    if (getTodaysBonusRecord()) text += '（今日のボーナスは受け取り済み）';
+  } else {
+    const daysUntilBonus = BONUS_INTERVAL - (state.streak % BONUS_INTERVAL);
+    text += `（あと${daysUntilBonus}日でボーナス！）`;
+  }
+  el.innerHTML = `<span class="streak-flame">🔥</span> ${text}`;
+}
+
+function renderBonusArea() {
+  const area = document.getElementById('bonus-area');
+  if (!area) return;
+  if (!isBonusDay() || getTodaysBonusRecord()) { area.innerHTML = ''; return; }
+
+  area.innerHTML = `
+    <button class="bonus-banner" id="bonus-claim-btn">
+      <svg class="bonus-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" /></svg>
+      <div>
+        <div class="bonus-text-main">${state.streak}日連続ログインボーナス！</div>
+        <div class="bonus-text-sub">タップしてもう1枚めくる</div>
+      </div>
+      <span class="bonus-arrow">›</span>
+    </button>
+  `;
+  document.getElementById('bonus-claim-btn').addEventListener('click', () => {
+    const bonusQuote = claimBonusQuote();
+    state.currentQuote = bonusQuote;
+    renderHome();
+    renderList();
+    renderManage();
+    if (bonusQuote.rarity === 'mythic') {
+      setTimeout(() => {
+        playMythicSound();
+        const quoteCard = document.getElementById('quote-card');
+        if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
+      }, typewriterDuration(bonusQuote.text));
+    }
+  });
+}
+
 // ── ホームタブ描画 ────────────────────────────────────────
 function renderHome() {
   const q = state.currentQuote;
@@ -356,11 +450,12 @@ function renderHome() {
   const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日（${['日','月','火','水','木','金','土'][today.getDay()]}）`;
 
   document.getElementById('home-date').textContent = dateStr + '　今日の一言';
+  renderStreakIndicator();
+  renderBonusArea();
 
   if (!q) {
     document.getElementById('home-quote-area').innerHTML =
       '<div class="empty-state"><div class="empty-icon">📭</div><p>表示できる名言がありません。</p></div>';
-    document.getElementById('diary-section').style.display = 'none';
     return;
   }
 
@@ -408,30 +503,8 @@ function renderHome() {
     });
   }
 
-  // 日記セクション表示
-  renderDiarySection(q.id);
-
   if (!document.getElementById('splash')) {
     typewriter(document.getElementById('quote-text'), q.text);
-  }
-}
-
-// ── ホーム日記セクション描画 ─────────────────────────────
-const DIARY_TOGGLE_ICON = '<svg class="diary-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>';
-
-function renderDiarySection(quoteId) {
-  const section = document.getElementById('diary-section');
-  section.style.display = 'block';
-  const existing = state.diary[quoteId] || '';
-
-  document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${existing ? 'コメントを編集する' : 'コメントを書く'}`;
-  document.getElementById('diary-textarea').value = existing;
-  document.getElementById('diary-char-count').textContent = `${existing.length} / 100`;
-
-  const q = state.quotes.find(q => q.id === quoteId);
-  if (q) {
-    document.getElementById('diary-quote-preview-text').textContent = q.text;
-    document.getElementById('diary-quote-preview-author').textContent = `— ${q.author}`;
   }
 }
 
@@ -771,25 +844,6 @@ function bindEvents() {
     if (e.key === 'Enter') submitAdminPin();
   });
 
-  // 日記：トグルボタン（コメントモーダルを開く）
-  document.getElementById('diary-toggle-btn').addEventListener('click', () => {
-    document.getElementById('diary-modal-overlay').classList.add('open');
-    lockBodyScroll();
-    setTimeout(() => document.getElementById('diary-textarea').focus(), 150);
-  });
-
-  document.getElementById('diary-modal-overlay').addEventListener('click', e => {
-    if (e.target === document.getElementById('diary-modal-overlay')) saveAndCloseDiary();
-  });
-
-  // 日記：文字数カウント
-  document.getElementById('diary-textarea').addEventListener('input', e => {
-    document.getElementById('diary-char-count').textContent = `${e.target.value.length} / 100`;
-  });
-
-  // 日記：閉じる（＝自動保存）
-  document.getElementById('diary-save-btn').addEventListener('click', saveAndCloseDiary);
-
   // 詳細モーダル：閉じる（＝自動保存）
   document.getElementById('detail-modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('detail-modal-overlay')) saveAndCloseDetail();
@@ -852,22 +906,6 @@ function lockBodyScroll() {
 function unlockBodyScroll() {
   document.querySelector('main').classList.remove('no-scroll');
   document.documentElement.classList.remove('modal-open');
-}
-
-function closeDiaryModal() {
-  document.getElementById('diary-modal-overlay').classList.remove('open');
-  unlockBodyScroll();
-}
-
-function saveAndCloseDiary() {
-  if (!state.currentQuote) { closeDiaryModal(); return; }
-  const text = document.getElementById('diary-textarea').value.trim();
-  const existing = state.diary[state.currentQuote.id] || '';
-  closeDiaryModal();
-  if (text === existing) return;
-  saveDiaryEntry(state.currentQuote.id, text);
-  document.getElementById('diary-toggle-btn').innerHTML = `${DIARY_TOGGLE_ICON}${text ? 'コメントを編集する' : 'コメントを書く'}`;
-  showToast(text ? 'コメントを保存しました' : 'コメントを削除しました');
 }
 
 // ── 名言追加・編集モーダル ────────────────────────────────

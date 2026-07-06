@@ -48,16 +48,10 @@
     <!-- ホームタブ -->
     <section id="tab-home" class="tab-section active">
       <p class="home-date" id="home-date"></p>
+      <div class="streak-indicator" id="streak-indicator"></div>
       <div id="home-quote-area"></div>
+      <div id="bonus-area"></div>
       <button class="admin-next-btn" id="admin-next-quote-btn" style="display:none;">次の名言（管理者テスト表示）</button>
-
-      <!-- 日記セクション -->
-      <div class="diary-section" id="diary-section" style="display:none">
-        <button class="diary-toggle-btn" id="diary-toggle-btn">
-          <svg class="diary-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
-          コメントを書く
-        </button>
-      </div>
     </section>
 
     <!-- 一覧タブ -->
@@ -216,7 +210,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.10.0</div>
+            <div class="settings-sublabel">Version 2.11.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -330,23 +324,6 @@
     <div class="modal-actions">
       <button class="btn-cancel" id="admin-pin-cancel">Cancel</button>
       <button class="btn-save admin-pin-unlock-btn" id="admin-pin-submit">Unlock</button>
-    </div>
-  </div>
-</div>
-
-<!-- コメント入力モーダル -->
-<div class="modal-overlay centered-modal" id="diary-modal-overlay">
-  <div class="modal centered-modal-box diary-modal-box">
-    <button class="diary-close-btn" id="diary-save-btn">✕</button>
-    <div class="diary-quote-preview">
-      <div class="diary-quote-preview-text" id="diary-quote-preview-text"></div>
-      <div class="diary-quote-preview-author" id="diary-quote-preview-author"></div>
-    </div>
-    <div class="diary-editor" id="diary-editor">
-      <textarea class="diary-textarea" id="diary-textarea" maxlength="100"></textarea>
-      <div class="diary-meta">
-        <span class="diary-char-count" id="diary-char-count">0 / 100</span>
-      </div>
     </div>
   </div>
 </div>
