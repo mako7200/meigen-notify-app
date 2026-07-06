@@ -3,7 +3,7 @@
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
-const QUOTES_DATA_VERSION = 6;
+const QUOTES_DATA_VERSION = 7;
 
 const RANK_META = {
   rare:        { class: 'rank-rare',   label: 'RARE' },
@@ -32,6 +32,71 @@ function mythicStyleAttr(q) {
   if (q.rarity !== 'mythic') return '';
   const c = (q.themeColors && q.themeColors.length) ? q.themeColors : MYTHIC_DEFAULT_COLORS;
   return ` style="--mc1:${c[0]};--mc2:${c[1]};--mc3:${c[2] || c[0]};"`;
+}
+
+// ── 着せ替えテーマ ────────────────────────────────────────
+const THEMES = {
+  default: {
+    label: 'デフォルト',
+    unlockId: null,
+    stops: '#090627, #14063a, #0d1a4a, #1a0a3d',
+    bgSize: '400% 400%',
+    speed: '12s'
+  },
+  aizen: {
+    label: '藍染',
+    unlockId: 101,
+    stops: '#050208 0%, #4A1580 30%, #3E3A2A 45%, #1A0838 65%, #050208 100%',
+    bgSize: '500% 500%',
+    speed: '36s'
+  },
+  giorno: {
+    label: 'ジョルノ',
+    unlockId: 102,
+    stops: '#020805 0%, #0F5C36 30%, #423C22 45%, #0A2818 65%, #020805 100%',
+    bgSize: '500% 500%',
+    speed: '36s'
+  },
+  tanaka: {
+    label: '田中',
+    unlockId: 103,
+    stops: '#050505 0%, #6B2400 30%, #3A2E22 45%, #1A0F08 65%, #050505 100%',
+    bgSize: '500% 500%',
+    speed: '36s'
+  }
+};
+
+function applyTheme(key) {
+  const theme = THEMES[key] || THEMES.default;
+  const root = document.documentElement.style;
+  root.setProperty('--theme-stops', theme.stops);
+  root.setProperty('--theme-bg-size', theme.bgSize);
+  root.setProperty('--theme-speed', theme.speed);
+}
+
+function isThemeUnlocked(key) {
+  if (state.isAdmin) return true;
+  const theme = THEMES[key];
+  if (!theme.unlockId) return true;
+  return state.unlocked.some(u => u.id === theme.unlockId);
+}
+
+function renderThemeSwatches() {
+  const list = document.getElementById('theme-swatch-list');
+  const lockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+  list.innerHTML = Object.keys(THEMES).map(key => {
+    const theme = THEMES[key];
+    const unlocked = isThemeUnlocked(key);
+    const isActive = state.settings.theme === key;
+    return `
+      <button class="theme-swatch${isActive ? ' active' : ''}${unlocked ? '' : ' locked'}" data-theme="${key}">
+        <div class="theme-swatch-circle" style="background-image: linear-gradient(-45deg, ${theme.stops});">
+          ${unlocked ? '' : `<span class="theme-swatch-lock-icon">${lockSvg}</span>`}
+        </div>
+        <div class="theme-swatch-label">${unlocked ? theme.label : '？？？'}</div>
+      </button>
+    `;
+  }).join('');
 }
 
 const Storage = {
@@ -69,9 +134,10 @@ const Storage = {
     return result;
   },
   getSettings() {
+    const defaults = { notificationTime: '07:00', notificationEnabled: false, activeCategories: ['historical', 'philosophy', 'business', 'sports'], theme: 'default' };
     const saved = localStorage.getItem('meigen_settings');
-    if (saved) return JSON.parse(saved);
-    return { notificationTime: '07:00', notificationEnabled: false, activeCategories: ['historical', 'philosophy', 'business', 'sports'] };
+    if (saved) return { ...defaults, ...JSON.parse(saved) };
+    return defaults;
   },
   saveSettings(settings) { localStorage.setItem('meigen_settings', JSON.stringify(settings)); },
   getNotificationDate() { return localStorage.getItem('meigen_notif_date') || ''; },
@@ -97,6 +163,7 @@ let state = {
   currentQuote: null,
   listFilter: 'all',
   listSearch: '',
+  manageSearch: '',
   editingId: null,
   favorites: [],
   listFavoriteOnly: false,
@@ -117,6 +184,7 @@ function init() {
   state.diary     = Storage.getDiary();
   state.currentQuote = getDailyQuote();
 
+  applyTheme(state.settings.theme);
   renderHome();
   renderList();
   renderManage();
@@ -203,6 +271,15 @@ function renderHome() {
       playStarSound();
     }
   });
+
+  // 超シークレットレア：カードタップで演出を何度でも見られる
+  if (q.rarity === 'mythic') {
+    document.getElementById('quote-card').addEventListener('click', e => {
+      if (e.target.closest('#card-fav-btn')) return;
+      playMythicSound();
+      spawnMythicBurst(document.getElementById('quote-card'), q.themeColors);
+    });
+  }
 
   // 日記セクション表示
   renderDiarySection(q.id);
@@ -320,11 +397,17 @@ function renderManage() {
   });
 
   const unlockedIds = state.unlocked.map(u => u.id);
-  const quotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
+  let quotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
+
+  const search = state.manageSearch.trim().toLowerCase();
+  if (search) {
+    quotes = quotes.filter(q => q.text.toLowerCase().includes(search) || q.author.toLowerCase().includes(search));
+  }
 
   if (quotes.length === 0) {
-    document.getElementById('manage-list').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
+    document.getElementById('manage-list').innerHTML = search
+      ? '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>'
+      : '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
     return;
   }
   document.getElementById('manage-list').innerHTML = quotes.map(q => {
@@ -385,6 +468,7 @@ function renderSettings() {
     const el = document.getElementById(`cat-${cat}`);
     if (el) el.checked = s.activeCategories.includes(cat);
   });
+  renderThemeSwatches();
 }
 
 // ── イベントバインド ──────────────────────────────────────
@@ -398,6 +482,12 @@ function bindEvents() {
   document.getElementById('list-search').addEventListener('input', e => {
     state.listSearch = e.target.value;
     renderList();
+  });
+
+  // 管理：検索
+  document.getElementById('manage-search').addEventListener('input', e => {
+    state.manageSearch = e.target.value;
+    renderManage();
   });
 
   // 一覧：カテゴリフィルター
@@ -462,6 +552,13 @@ function bindEvents() {
     renderHome();
     switchTab('home');
     showToast('ホームにテスト表示しました');
+    if (quote.rarity === 'mythic') {
+      setTimeout(() => {
+        playMythicSound();
+        const quoteCard = document.getElementById('quote-card');
+        if (quoteCard) spawnMythicBurst(quoteCard, quote.themeColors);
+      }, 450 + typewriterDuration(quote.text));
+    }
   });
 
   // 設定：通知トグル
@@ -496,6 +593,19 @@ function bindEvents() {
       Storage.saveSettings(state.settings);
       showToast('カテゴリ設定を保存しました');
     });
+  });
+
+  // 着せ替え：テーマ選択
+  document.getElementById('theme-swatch-list').addEventListener('click', e => {
+    const swatch = e.target.closest('.theme-swatch');
+    if (!swatch) return;
+    const key = swatch.dataset.theme;
+    if (!isThemeUnlocked(key)) { showToast('まだ解放されていないテーマです'); return; }
+    state.settings.theme = key;
+    Storage.saveSettings(state.settings);
+    applyTheme(key);
+    renderThemeSwatches();
+    showToast(`テーマを「${THEMES[key].label}」に変更しました`);
   });
 
   // 名言追加・編集モーダル
@@ -551,6 +661,14 @@ function bindEvents() {
     if (!state.isAdmin || state.quotes.length === 0) return;
     state.currentQuote = state.quotes[Math.floor(Math.random() * state.quotes.length)];
     renderHome();
+    if (state.currentQuote.rarity === 'mythic') {
+      const quote = state.currentQuote;
+      setTimeout(() => {
+        playMythicSound();
+        const quoteCard = document.getElementById('quote-card');
+        if (quoteCard) spawnMythicBurst(quoteCard, quote.themeColors);
+      }, typewriterDuration(quote.text));
+    }
   });
 }
 
@@ -573,6 +691,7 @@ function switchTab(tab) {
   document.getElementById('header-title-text').textContent = TAB_LABELS[tab] || TAB_LABELS.home;
   if (tab === 'list') renderList();
   if (tab === 'manage') renderManage();
+  if (tab === 'settings') renderSettings();
 }
 
 // ── モーダル表示中の背面スクロール制御 ────────────────────
@@ -917,11 +1036,17 @@ function initSplash() {
 }
 
 // ── 超シークレットレア初解放時の演出 ──────────────────────
+function typewriterDuration(text, speed = 60) {
+  return (text ? text.length : 0) * speed;
+}
+
 function revealMythicIfNeeded() {
   if (!dailyQuoteJustRevealed || !state.currentQuote || state.currentQuote.rarity !== 'mythic') return;
-  playMythicSound();
-  const card = document.getElementById('quote-card');
-  if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
+  setTimeout(() => {
+    playMythicSound();
+    const card = document.getElementById('quote-card');
+    if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
+  }, typewriterDuration(state.currentQuote.text) + 400);
 }
 
 // ── お気に入り ────────────────────────────────────────────
@@ -1032,13 +1157,13 @@ function spawnMythicBurst(el, colors) {
     ring.style.top = cy + 'px';
     ring.style.borderColor = palette[i % palette.length];
     ring.style.boxShadow = `0 0 24px ${palette[i % palette.length]}`;
-    ring.style.animationDelay = (i * 0.1) + 's';
+    ring.style.animationDelay = (i * 0.2) + 's';
     document.body.appendChild(ring);
     ring.addEventListener('animationend', () => ring.remove());
   }
 
   // 太めのインパクトライン（少数・不均等な角度で鋭さを出す）
-  const count = 8;
+  const count = 16;
   for (let i = 0; i < count; i++) {
     const color = palette[i % palette.length];
     const ray = document.createElement('div');

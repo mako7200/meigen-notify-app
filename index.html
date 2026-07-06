@@ -83,6 +83,9 @@
     <!-- 管理タブ -->
     <section id="tab-manage" class="tab-section">
       <div class="admin-bar" id="admin-bar"></div>
+      <div class="search-row">
+        <input type="search" class="search-box" id="manage-search" placeholder="名言・著者名で検索...">
+      </div>
       <button class="add-btn" id="add-quote-btn" style="display:none">
         + 名言を追加する
       </button>
@@ -156,11 +159,16 @@
       </div>
 
       <div class="settings-section">
+        <div class="settings-section-title">着せ替え</div>
+        <div class="theme-swatch-list" id="theme-swatch-list"></div>
+      </div>
+
+      <div class="settings-section">
         <div class="settings-section-title">アプリ情報</div>
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.6.0</div>
+            <div class="settings-sublabel">Version 2.7.0</div>
           </div>
         </div>
         <div class="settings-row">

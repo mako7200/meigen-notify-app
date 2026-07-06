@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meigen-notify-v17';
+const CACHE_NAME = 'meigen-notify-v18';
 const CACHE_FILES = [
   './',
   './index.html',
