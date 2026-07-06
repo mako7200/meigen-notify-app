@@ -299,58 +299,6 @@ main {
 .seg-secret  { background: linear-gradient(90deg, #ff5a5a, #ffd246, #82ffa0, #5abeff, #d282ff); }
 .seg-mythic  { background: linear-gradient(90deg, #8B5CF6, #F0C878); }
 
-/* レア度別内訳モーダル */
-.rarity-modal-box {
-  width: 380px;
-  max-width: 90vw;
-  padding-top: 40px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  position: relative;
-}
-
-.rarity-modal-total {
-  font-size: 0.75rem;
-  color: rgba(255, 248, 230, 0.5);
-  margin-bottom: 18px;
-}
-
-.rarity-row {
-  margin-bottom: 14px;
-}
-
-.rarity-row:last-child {
-  margin-bottom: 0;
-}
-
-.rarity-row-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.82rem;
-  color: rgba(255, 248, 230, 0.85);
-  margin-bottom: 5px;
-}
-
-.rarity-row-count {
-  color: rgba(255, 248, 230, 0.5);
-  font-size: 0.78rem;
-}
-
-.rarity-row-track {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.rarity-row-fill {
-  height: 100%;
-  border-radius: 5px;
-}
-
 .quote-card {
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(20px);
@@ -1926,6 +1874,58 @@ nav {
   background-size: cover;
   background-position: top center;
   background-repeat: no-repeat;
+}
+
+/* レア度別内訳モーダル */
+.rarity-modal-box {
+  width: 380px;
+  max-width: 90vw;
+  padding-top: 40px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.rarity-modal-total {
+  font-size: 0.75rem;
+  color: rgba(255, 248, 230, 0.5);
+  margin-bottom: 18px;
+}
+
+.rarity-row {
+  margin-bottom: 14px;
+}
+
+.rarity-row:last-child {
+  margin-bottom: 0;
+}
+
+.rarity-row-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: rgba(255, 248, 230, 0.85);
+  margin-bottom: 5px;
+}
+
+.rarity-row-count {
+  color: rgba(255, 248, 230, 0.5);
+  font-size: 0.78rem;
+}
+
+.rarity-row-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.rarity-row-fill {
+  height: 100%;
+  border-radius: 5px;
 }
 
 .detail-badge-row {
