@@ -29,6 +29,58 @@ function rarityRank(q) {
   return RARITY_ORDER[q.rarity] || 0;
 }
 
+// ── レア度別コレクション内訳 ──────────────────────────────
+const RARITY_TIERS = [
+  { key: 'normal',      label: 'Normal',      segClass: 'seg-normal' },
+  { key: 'rare',        label: 'Rare',        segClass: 'seg-rare' },
+  { key: 'super_rare',  label: 'Super Rare',  segClass: 'seg-super' },
+  { key: 'ultra_rare',  label: 'Ultra Rare',  segClass: 'seg-ultra' },
+  { key: 'secret_rare', label: 'Secret Rare', segClass: 'seg-secret' },
+  { key: 'mythic',      label: 'Mythic',      segClass: 'seg-mythic' }
+];
+
+function getRarityBreakdown() {
+  const unlockedIds = state.unlocked.map(u => u.id);
+  return RARITY_TIERS.map(tier => {
+    const tierQuotes = state.quotes.filter(q => (q.rarity || 'normal') === tier.key);
+    const unlocked = tierQuotes.filter(q => unlockedIds.includes(q.id)).length;
+    return { ...tier, total: tierQuotes.length, unlocked };
+  });
+}
+
+function renderProgressTrack() {
+  const track = document.getElementById('progress-track');
+  if (!track) return;
+  const total = state.quotes.length;
+  track.innerHTML = getRarityBreakdown().map(tier => {
+    const pct = total > 0 ? (tier.unlocked / total) * 100 : 0;
+    return `<div class="progress-seg ${tier.segClass}" style="width:${pct}%"></div>`;
+  }).join('');
+}
+
+function openRarityModal() {
+  const unlockedIds = state.unlocked.map(u => u.id);
+  document.getElementById('rarity-modal-total').textContent = `${unlockedIds.length} / ${state.quotes.length}`;
+  document.getElementById('rarity-modal-rows').innerHTML = getRarityBreakdown()
+    .filter(tier => tier.total > 0)
+    .map(tier => {
+      const pct = tier.total > 0 ? (tier.unlocked / tier.total) * 100 : 0;
+      return `
+        <div class="rarity-row">
+          <div class="rarity-row-label"><span>${tier.label}</span><span class="rarity-row-count">${tier.unlocked} / ${tier.total}</span></div>
+          <div class="rarity-row-track"><div class="rarity-row-fill ${tier.segClass}" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+  document.getElementById('rarity-modal-overlay').classList.add('open');
+  lockBodyScroll();
+}
+
+function closeRarityModal() {
+  document.getElementById('rarity-modal-overlay').classList.remove('open');
+  unlockBodyScroll();
+}
+
 function sortQuotes(quotes, sortKey, dir) {
   let sorted;
   if (sortKey === 'rarity') {
@@ -526,7 +578,7 @@ function renderList() {
 
   const totalLocked = state.quotes.length - unlockedIds.length;
   document.getElementById('progress-count').textContent = `${unlockedIds.length} / ${state.quotes.length}`;
-  document.getElementById('progress-fill').style.width = state.quotes.length > 0 ? `${(unlockedIds.length / state.quotes.length) * 100}%` : '0%';
+  renderProgressTrack();
 
   if (unlockedQuotes.length === 0 && (state.listFavoriteOnly || search || !allCategoriesSelected)) {
     document.getElementById('quote-list').innerHTML = state.listFavoriteOnly
@@ -763,6 +815,13 @@ function bindEvents() {
     btn.classList.toggle('active', state.listFavoriteOnly);
     btn.textContent = state.listFavoriteOnly ? '★' : '☆';
     renderList();
+  });
+
+  // レア度別内訳モーダル
+  document.getElementById('progress-block').addEventListener('click', openRarityModal);
+  document.getElementById('rarity-modal-close').addEventListener('click', closeRarityModal);
+  document.getElementById('rarity-modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'rarity-modal-overlay') closeRarityModal();
   });
 
   // 管理：追加ボタン

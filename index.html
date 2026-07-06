@@ -91,9 +91,15 @@
           </div>
         </div>
       </div>
-      <div class="progress-block">
-        <div class="progress-label"><span>名言コレクション</span><span id="progress-count">0 / 0</span></div>
-        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-block" id="progress-block">
+        <div class="progress-label">
+          <div class="progress-label-left">
+            <span>名言コレクション</span>
+            <svg class="progress-label-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <span id="progress-count">0 / 0</span>
+        </div>
+        <div class="progress-track" id="progress-track"></div>
       </div>
       <div class="quote-list" id="quote-list"></div>
     </section>
@@ -210,7 +216,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.11.0</div>
+            <div class="settings-sublabel">Version 2.12.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -325,6 +331,15 @@
       <button class="btn-cancel" id="admin-pin-cancel">Cancel</button>
       <button class="btn-save admin-pin-unlock-btn" id="admin-pin-submit">Unlock</button>
     </div>
+  </div>
+</div>
+
+<!-- レア度別内訳モーダル -->
+<div class="modal-overlay centered-modal" id="rarity-modal-overlay">
+  <div class="modal centered-modal-box rarity-modal-box">
+    <button class="diary-close-btn" id="rarity-modal-close">✕</button>
+    <div class="rarity-modal-total" id="rarity-modal-total">0 / 0</div>
+    <div id="rarity-modal-rows"></div>
   </div>
 </div>
 
