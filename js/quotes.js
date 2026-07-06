@@ -328,5 +328,6 @@ const CATEGORY_LABELS = {
   historical: "偉人・歴史",
   philosophy: "哲学・思想",
   business: "ビジネス",
-  sports: "スポーツ"
+  sports: "スポーツ",
+  special: "特別枠"
 };

@@ -110,20 +110,35 @@
       <div class="search-row">
         <input type="search" class="search-box" id="manage-search" placeholder="名言・著者名で検索...">
       </div>
-      <div class="sort-row">
-        <button class="sort-direction-btn asc" id="manage-sort-direction" type="button" data-dir="asc" aria-label="昇順・降順の切り替え">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/></svg>
-        </button>
-        <div class="sort-dropdown" id="manage-sort-dropdown">
+      <div class="sort-row sort-row-split">
+        <div class="sort-dropdown" id="manage-category-filter-dropdown">
           <button class="sort-dropdown-btn" type="button">
-            <span class="sort-dropdown-current">入手順</span>
+            <span class="sort-dropdown-current" id="manage-category-filter-label">すべて</span>
             <svg class="sort-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <ul class="sort-dropdown-menu">
-            <li class="sort-dropdown-option active" data-value="default">入手順</li>
-            <li class="sort-dropdown-option" data-value="rarity">レア度</li>
-            <li class="sort-dropdown-option" data-value="author">著者名</li>
+          <ul class="sort-dropdown-menu filter-checkbox-menu">
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="manage-category-filter-checkbox" value="historical" checked>偉人・歴史</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="manage-category-filter-checkbox" value="philosophy" checked>哲学・思想</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="manage-category-filter-checkbox" value="business" checked>ビジネス・成功者</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="manage-category-filter-checkbox" value="sports" checked>スポーツ選手</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="manage-category-filter-checkbox" value="special" checked>特別枠</label></li>
           </ul>
+        </div>
+        <div class="sort-controls">
+          <button class="sort-direction-btn asc" id="manage-sort-direction" type="button" data-dir="asc" aria-label="昇順・降順の切り替え">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/></svg>
+          </button>
+          <div class="sort-dropdown" id="manage-sort-dropdown">
+            <button class="sort-dropdown-btn" type="button">
+              <span class="sort-dropdown-current">入手順</span>
+              <svg class="sort-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="sort-dropdown-menu">
+              <li class="sort-dropdown-option active" data-value="default">入手順</li>
+              <li class="sort-dropdown-option" data-value="rarity">レア度</li>
+              <li class="sort-dropdown-option" data-value="author">著者名</li>
+            </ul>
+          </div>
         </div>
       </div>
       <button class="add-btn" id="add-quote-btn" style="display:none">
@@ -174,40 +189,15 @@
 
       <details class="settings-section">
         <summary class="settings-section-title accordion-summary">
-          <span>カテゴリ設定（表示・通知対象）</span>
+          <span>カテゴリ一覧</span>
           <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         </summary>
 
-        <div class="settings-row">
-          <label class="category-check">
-            <input type="checkbox" id="cat-historical" checked>
-            偉人・歴史上の人物
-          </label>
-        </div>
-        <div class="settings-row">
-          <label class="category-check">
-            <input type="checkbox" id="cat-philosophy" checked>
-            哲学・思想家
-          </label>
-        </div>
-        <div class="settings-row">
-          <label class="category-check">
-            <input type="checkbox" id="cat-business" checked>
-            ビジネス・成功者
-          </label>
-        </div>
-        <div class="settings-row">
-          <label class="category-check">
-            <input type="checkbox" id="cat-sports" checked>
-            スポーツ選手
-          </label>
-        </div>
-        <div class="settings-row">
-          <label class="category-check">
-            <input type="checkbox" id="cat-special" checked>
-            特別枠
-          </label>
-        </div>
+        <div class="settings-row"><div class="settings-label">偉人・歴史上の人物</div></div>
+        <div class="settings-row"><div class="settings-label">哲学・思想家</div></div>
+        <div class="settings-row"><div class="settings-label">ビジネス・成功者</div></div>
+        <div class="settings-row"><div class="settings-label">スポーツ選手</div></div>
+        <div class="settings-row"><div class="settings-label">特別枠</div></div>
       </details>
 
       <details class="settings-section">
@@ -226,7 +216,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.9.0</div>
+            <div class="settings-sublabel">Version 2.10.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認

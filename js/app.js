@@ -85,19 +85,19 @@ function initSortDropdown(dropdownId, onSelect) {
 }
 
 // ── カテゴリフィルター（複数選択ドロップダウン） ────────────
-function updateCategoryFilterLabel() {
-  const label = document.getElementById('category-filter-label');
-  const total = document.querySelectorAll('.category-filter-checkbox').length;
-  label.textContent = state.listFilterCategories.length === total
+function updateCategoryFilterLabel(labelId, checkboxClass, filterList) {
+  const label = document.getElementById(labelId);
+  const total = document.querySelectorAll('.' + checkboxClass).length;
+  label.textContent = filterList.length === total
     ? 'すべて'
-    : `表示カテゴリ数：${state.listFilterCategories.length}`;
+    : `表示カテゴリ数：${filterList.length}`;
 }
 
-function initCategoryFilterDropdown() {
-  const dropdown = document.getElementById('category-filter-dropdown');
+function initCategoryFilterDropdown(dropdownId, labelId, checkboxClass, stateKey, onChange) {
+  const dropdown = document.getElementById(dropdownId);
   const btn = dropdown.querySelector('.sort-dropdown-btn');
   const menu = dropdown.querySelector('.sort-dropdown-menu');
-  const checkboxes = dropdown.querySelectorAll('.category-filter-checkbox');
+  const checkboxes = dropdown.querySelectorAll('.' + checkboxClass);
 
   btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -118,23 +118,25 @@ function initCategoryFilterDropdown() {
         showToast('最低1つのカテゴリを選択してください');
         return;
       }
-      state.listFilterCategories = checked;
-      updateCategoryFilterLabel();
-      renderList();
+      state[stateKey] = checked;
+      updateCategoryFilterLabel(labelId, checkboxClass, state[stateKey]);
+      onChange();
     });
   });
 }
 
 function categoryLabel(q) {
-  if (q.category === 'special') return '';
   return CATEGORY_LABELS[q.category] || q.category;
 }
 
-function mythicStyleAttr(q) {
+function mythicStyleAttr(q, withCharacterBg) {
   if (q.rarity !== 'mythic') return '';
   const c = (q.themeColors && q.themeColors.length) ? q.themeColors : MYTHIC_DEFAULT_COLORS;
-  const bgImg = q.characterImage ? `--char-bg-image:url('${q.characterImage}');` : '';
-  return ` style="--mc1:${c[0]};--mc2:${c[1]};--mc3:${c[2] || c[0]};${bgImg}"`;
+  let style = `--mc1:${c[0]};--mc2:${c[1]};--mc3:${c[2] || c[0]};`;
+  if (withCharacterBg && q.characterImage) {
+    style += `background-image: linear-gradient(180deg, rgba(10,6,20,0.35) 0%, rgba(10,6,20,0.65) 55%, rgba(10,6,20,0.92) 100%), url('${q.characterImage}');`;
+  }
+  return ` style="${style}"`;
 }
 
 function characterBgClass(q) {
@@ -243,7 +245,7 @@ const Storage = {
     return result;
   },
   getSettings() {
-    const defaults = { notificationTime: '07:00', notificationEnabled: false, activeCategories: ['historical', 'philosophy', 'business', 'sports', 'special'], theme: 'default' };
+    const defaults = { notificationTime: '07:00', notificationEnabled: false, theme: 'default' };
     const saved = localStorage.getItem('meigen_settings');
     if (saved) return { ...defaults, ...JSON.parse(saved) };
     return defaults;
@@ -271,6 +273,7 @@ let state = {
   settings: {},
   currentQuote: null,
   listFilterCategories: ['historical', 'philosophy', 'business', 'sports', 'special'],
+  manageFilterCategories: ['historical', 'philosophy', 'business', 'sports', 'special'],
   listSearch: '',
   manageSearch: '',
   listSort: 'default',
@@ -365,13 +368,20 @@ function renderHome() {
   const rank = RANK_META[q.rarity];
   const cLabel = categoryLabel(q);
   document.getElementById('home-quote-area').innerHTML = `
-    <div class="quote-card${rank ? ' ' + rank.class : ''}${characterBgClass(q)}" id="quote-card"${mythicStyleAttr(q)}>
+    <div class="quote-card${rank ? ' ' + rank.class : ''}${characterBgClass(q)}" id="quote-card"${mythicStyleAttr(q, true)}>
       ${rankRingHtml(q.rarity)}
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
-      <div class="quote-author">
-        ${cLabel ? `<span class="category-badge">${cLabel}</span>` : '<span></span>'}
+      <div class="quote-author-row">
         <span class="quote-author-name">${escapeHtml(q.author)}</span>
+      </div>
+      <div class="quote-meta-row">
+        <button class="card-detail-btn" id="card-detail-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><circle cx="12" cy="8.25" r="0.75" fill="currentColor" stroke="none"/></svg>
+          名言の詳細
+          <svg class="btn-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        ${cLabel ? `<span class="category-badge">${cLabel}</span>` : ''}
       </div>
     </div>
   `;
@@ -385,10 +395,14 @@ function renderHome() {
     }
   });
 
+  document.getElementById('card-detail-btn').addEventListener('click', () => {
+    openDetailModal(q.id);
+  });
+
   // 超シークレットレア：カードタップで演出を何度でも見られる
   if (q.rarity === 'mythic') {
     document.getElementById('quote-card').addEventListener('click', e => {
-      if (e.target.closest('#card-fav-btn')) return;
+      if (e.target.closest('#card-fav-btn') || e.target.closest('#card-detail-btn')) return;
       playMythicSound();
       spawnMythicBurst(document.getElementById('quote-card'), q.themeColors);
     });
@@ -515,6 +529,10 @@ function renderManage() {
   const unlockedIds = state.unlocked.map(u => u.id);
   let quotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
 
+  const manageCategoryFilterTotal = document.querySelectorAll('.manage-category-filter-checkbox').length;
+  const manageAllCategoriesSelected = state.manageFilterCategories.length === manageCategoryFilterTotal;
+  quotes = quotes.filter(q => state.manageFilterCategories.includes(q.category));
+
   const search = state.manageSearch.trim().toLowerCase();
   if (search) {
     quotes = quotes.filter(q => q.text.toLowerCase().includes(search) || q.author.toLowerCase().includes(search));
@@ -522,7 +540,7 @@ function renderManage() {
   quotes = sortQuotes(quotes, state.manageSort, state.manageSortDir);
 
   if (quotes.length === 0) {
-    document.getElementById('manage-list').innerHTML = search
+    document.getElementById('manage-list').innerHTML = (search || !manageAllCategoriesSelected)
       ? '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>'
       : '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
     return;
@@ -581,10 +599,6 @@ function renderSettings() {
   const s = state.settings;
   document.getElementById('notif-toggle').checked = s.notificationEnabled;
   document.getElementById('notif-time').value = s.notificationTime;
-  ['historical', 'philosophy', 'business', 'sports', 'special'].forEach(cat => {
-    const el = document.getElementById(`cat-${cat}`);
-    if (el) el.checked = s.activeCategories.includes(cat);
-  });
   renderThemeSwatches();
 }
 
@@ -642,8 +656,9 @@ function bindEvents() {
     mainEl.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  // 一覧：カテゴリフィルター（複数選択ドロップダウン）
-  initCategoryFilterDropdown();
+  // 一覧・管理：カテゴリフィルター（複数選択ドロップダウン）
+  initCategoryFilterDropdown('category-filter-dropdown', 'category-filter-label', 'category-filter-checkbox', 'listFilterCategories', renderList);
+  initCategoryFilterDropdown('manage-category-filter-dropdown', 'manage-category-filter-label', 'manage-category-filter-checkbox', 'manageFilterCategories', renderManage);
 
   // 一覧：お気に入り＋カードタップ（委譲）
   document.getElementById('quote-list').addEventListener('click', e => {
@@ -724,20 +739,6 @@ function bindEvents() {
     Storage.saveSettings(state.settings);
     updateNotificationSchedule();
     showToast(`通知時間を ${e.target.value} に設定しました`);
-  });
-
-  // 設定：カテゴリ
-  ['historical', 'philosophy', 'business', 'sports', 'special'].forEach(cat => {
-    document.getElementById(`cat-${cat}`).addEventListener('change', e => {
-      if (e.target.checked) {
-        if (!state.settings.activeCategories.includes(cat)) state.settings.activeCategories.push(cat);
-      } else {
-        if (state.settings.activeCategories.length <= 1) { e.target.checked = true; showToast('最低1つのカテゴリを選択してください'); return; }
-        state.settings.activeCategories = state.settings.activeCategories.filter(c => c !== cat);
-      }
-      Storage.saveSettings(state.settings);
-      showToast('カテゴリ設定を保存しました');
-    });
   });
 
   // 着せ替え：テーマ選択
@@ -973,10 +974,10 @@ function openDetailModal(id) {
   const detailBox = document.querySelector('.detail-modal-box');
   if (q.characterImage) {
     detailBox.classList.add('has-character-bg');
-    detailBox.style.setProperty('--char-bg-image', `url('${q.characterImage}')`);
+    detailBox.style.backgroundImage = `linear-gradient(180deg, rgba(10,6,20,0.45) 0%, rgba(10,6,20,0.75) 55%, rgba(10,6,20,0.92) 100%), url('${q.characterImage}')`;
   } else {
     detailBox.classList.remove('has-character-bg');
-    detailBox.style.removeProperty('--char-bg-image');
+    detailBox.style.backgroundImage = '';
   }
 
   document.getElementById('detail-modal-overlay').classList.add('open');

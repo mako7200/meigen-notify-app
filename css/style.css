@@ -579,9 +579,6 @@ main {
 }
 
 .quote-card.has-character-bg {
-  background-image:
-    linear-gradient(180deg, rgba(10,6,20,0.35) 0%, rgba(10,6,20,0.65) 55%, rgba(10,6,20,0.92) 100%),
-    var(--char-bg-image);
   background-size: cover;
   background-position: top center;
   background-repeat: no-repeat;
@@ -598,12 +595,53 @@ main {
   padding-top: 12px;
 }
 
-.quote-author {
+.quote-author-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.quote-meta-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.card-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 6px 12px;
+  border: 1px solid rgba(255, 248, 230, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 248, 230, 0.16);
+  color: rgba(255, 248, 230, 0.95);
+  font-size: 0.75rem;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.55), 0 2px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.card-detail-btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.card-detail-btn .btn-chevron {
+  width: 11px;
+  height: 11px;
+  opacity: 0.75;
+  margin-left: -2px;
+}
+
+.card-detail-btn:active {
+  background: rgba(255, 248, 230, 0.26);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .quote-author-name {
@@ -789,7 +827,8 @@ main {
   display: block;
 }
 
-#category-filter-dropdown .sort-dropdown-menu {
+#category-filter-dropdown .sort-dropdown-menu,
+#manage-category-filter-dropdown .sort-dropdown-menu {
   left: 0;
   right: auto;
 }
@@ -1301,22 +1340,6 @@ details[open] > .accordion-summary .accordion-caret {
 }
 
 .time-input:focus { border-color: var(--primary); }
-
-/* カテゴリチェック */
-.category-check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  color: rgba(255, 248, 230, 0.9);
-}
-
-.category-check input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
 
 .notification-note {
   font-size: 0.78rem;
@@ -1861,9 +1884,6 @@ nav {
 .detail-modal-box .diary-char-row { color: rgba(255,255,255,0.4); }
 
 .detail-modal-box.has-character-bg {
-  background-image:
-    linear-gradient(180deg, rgba(10,6,20,0.45) 0%, rgba(10,6,20,0.75) 55%, rgba(10,6,20,0.92) 100%),
-    var(--char-bg-image);
   background-size: cover;
   background-position: top center;
   background-repeat: no-repeat;
