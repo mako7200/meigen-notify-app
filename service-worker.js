@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meigen-notify-v19';
+const CACHE_NAME = 'meigen-notify-v20';
 const CACHE_FILES = [
   './',
   './index.html',
@@ -7,7 +7,10 @@ const CACHE_FILES = [
   './js/quotes.js',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './images/characters/aizen.png',
+  './images/characters/giorno.png',
+  './images/characters/tanaka.png'
 ];
 
 self.addEventListener('install', event => {

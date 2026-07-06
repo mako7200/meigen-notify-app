@@ -3,7 +3,7 @@
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
-const QUOTES_DATA_VERSION = 7;
+const QUOTES_DATA_VERSION = 9;
 
 const RANK_META = {
   rare:        { class: 'rank-rare',   label: 'RARE' },
@@ -23,6 +23,108 @@ function rankRingHtml(rarity) {
   return '';
 }
 
+const RARITY_ORDER = { mythic: 5, secret_rare: 4, ultra_rare: 3, super_rare: 2, rare: 1 };
+
+function rarityRank(q) {
+  return RARITY_ORDER[q.rarity] || 0;
+}
+
+function sortQuotes(quotes, sortKey, dir) {
+  let sorted;
+  if (sortKey === 'rarity') {
+    sorted = [...quotes].sort((a, b) => rarityRank(b) - rarityRank(a));
+  } else if (sortKey === 'author') {
+    sorted = [...quotes].sort((a, b) => (a.authorReading || a.author).localeCompare(b.authorReading || b.author, 'ja'));
+  } else {
+    // 通常順 = 入手した順
+    const orderIndex = {};
+    state.unlocked.forEach((u, i) => { orderIndex[u.id] = i; });
+    sorted = [...quotes].sort((a, b) => (orderIndex[a.id] ?? 999999) - (orderIndex[b.id] ?? 999999));
+  }
+  return dir === 'desc' ? sorted.reverse() : sorted;
+}
+
+const SORT_DIR_ARROW = {
+  asc:  '<path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/>',
+  desc: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0-3.75-3.75M17.25 21 21 17.25"/>'
+};
+
+function updateSortDirectionBtn(btnId, dir) {
+  const btn = document.getElementById(btnId);
+  btn.classList.toggle('asc', dir === 'asc');
+  btn.classList.toggle('desc', dir === 'desc');
+  btn.dataset.dir = dir;
+  btn.querySelector('svg').innerHTML = SORT_DIR_ARROW[dir];
+}
+
+// ── 自作ドロップダウン（並び替え用） ────────────────────────
+function initSortDropdown(dropdownId, onSelect) {
+  const dropdown = document.getElementById(dropdownId);
+  const btn = dropdown.querySelector('.sort-dropdown-btn');
+  const label = dropdown.querySelector('.sort-dropdown-current');
+  const options = dropdown.querySelectorAll('.sort-dropdown-option');
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.sort-dropdown.open').forEach(d => {
+      if (d !== dropdown) d.classList.remove('open');
+    });
+    dropdown.classList.toggle('open');
+  });
+
+  options.forEach(opt => {
+    opt.addEventListener('click', e => {
+      e.stopPropagation();
+      options.forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      label.textContent = opt.textContent;
+      dropdown.classList.remove('open');
+      onSelect(opt.dataset.value);
+    });
+  });
+}
+
+// ── カテゴリフィルター（複数選択ドロップダウン） ────────────
+function updateCategoryFilterLabel() {
+  const label = document.getElementById('category-filter-label');
+  const total = document.querySelectorAll('.category-filter-checkbox').length;
+  label.textContent = state.listFilterCategories.length === total
+    ? 'すべて'
+    : `表示カテゴリ数：${state.listFilterCategories.length}`;
+}
+
+function initCategoryFilterDropdown() {
+  const dropdown = document.getElementById('category-filter-dropdown');
+  const btn = dropdown.querySelector('.sort-dropdown-btn');
+  const menu = dropdown.querySelector('.sort-dropdown-menu');
+  const checkboxes = dropdown.querySelectorAll('.category-filter-checkbox');
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.sort-dropdown.open').forEach(d => {
+      if (d !== dropdown) d.classList.remove('open');
+    });
+    dropdown.classList.toggle('open');
+  });
+
+  // チェックボックス操作ではドロップダウンを閉じない
+  menu.addEventListener('click', e => e.stopPropagation());
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = [...checkboxes].filter(c => c.checked).map(c => c.value);
+      if (checked.length === 0) {
+        cb.checked = true;
+        showToast('最低1つのカテゴリを選択してください');
+        return;
+      }
+      state.listFilterCategories = checked;
+      updateCategoryFilterLabel();
+      renderList();
+    });
+  });
+}
+
 function categoryLabel(q) {
   if (q.category === 'special') return '';
   return CATEGORY_LABELS[q.category] || q.category;
@@ -31,7 +133,12 @@ function categoryLabel(q) {
 function mythicStyleAttr(q) {
   if (q.rarity !== 'mythic') return '';
   const c = (q.themeColors && q.themeColors.length) ? q.themeColors : MYTHIC_DEFAULT_COLORS;
-  return ` style="--mc1:${c[0]};--mc2:${c[1]};--mc3:${c[2] || c[0]};"`;
+  const bgImg = q.characterImage ? `--char-bg-image:url('${q.characterImage}');` : '';
+  return ` style="--mc1:${c[0]};--mc2:${c[1]};--mc3:${c[2] || c[0]};${bgImg}"`;
+}
+
+function characterBgClass(q) {
+  return q.characterImage ? ' has-character-bg' : '';
 }
 
 // ── 着せ替えテーマ ────────────────────────────────────────
@@ -123,7 +230,9 @@ const Storage = {
         authorBio: q.authorBio || initial.authorBio || '',
         background: q.background || initial.background || '',
         rarity: q.rarity === 'legendary' ? (initial.rarity || '') : (q.rarity || initial.rarity),
-        themeColors: q.themeColors || initial.themeColors
+        themeColors: q.themeColors || initial.themeColors,
+        characterImage: q.characterImage || initial.characterImage,
+        authorReading: q.authorReading || initial.authorReading
       };
     });
     // 端末に保存済みのデータには存在しない、新しく追加された名言を補う
@@ -134,7 +243,7 @@ const Storage = {
     return result;
   },
   getSettings() {
-    const defaults = { notificationTime: '07:00', notificationEnabled: false, activeCategories: ['historical', 'philosophy', 'business', 'sports'], theme: 'default' };
+    const defaults = { notificationTime: '07:00', notificationEnabled: false, activeCategories: ['historical', 'philosophy', 'business', 'sports', 'special'], theme: 'default' };
     const saved = localStorage.getItem('meigen_settings');
     if (saved) return { ...defaults, ...JSON.parse(saved) };
     return defaults;
@@ -161,9 +270,13 @@ let state = {
   quotes: [],
   settings: {},
   currentQuote: null,
-  listFilter: 'all',
+  listFilterCategories: ['historical', 'philosophy', 'business', 'sports', 'special'],
   listSearch: '',
   manageSearch: '',
+  listSort: 'default',
+  manageSort: 'default',
+  listSortDir: 'asc',
+  manageSortDir: 'asc',
   editingId: null,
   favorites: [],
   listFavoriteOnly: false,
@@ -252,7 +365,7 @@ function renderHome() {
   const rank = RANK_META[q.rarity];
   const cLabel = categoryLabel(q);
   document.getElementById('home-quote-area').innerHTML = `
-    <div class="quote-card${rank ? ' ' + rank.class : ''}" id="quote-card"${mythicStyleAttr(q)}>
+    <div class="quote-card${rank ? ' ' + rank.class : ''}${characterBgClass(q)}" id="quote-card"${mythicStyleAttr(q)}>
       ${rankRingHtml(q.rarity)}
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
@@ -313,19 +426,22 @@ function renderList() {
   const unlockedIds = state.unlocked.map(u => u.id);
   const search = state.listSearch.trim().toLowerCase();
 
+  const categoryFilterTotal = document.querySelectorAll('.category-filter-checkbox').length;
+  const allCategoriesSelected = state.listFilterCategories.length === categoryFilterTotal;
   let unlockedQuotes = state.quotes.filter(q => {
     if (!unlockedIds.includes(q.id)) return false;
     if (state.listFavoriteOnly && !state.favorites.includes(q.id)) return false;
-    if (state.listFilter !== 'all' && q.category !== state.listFilter) return false;
+    if (!state.listFilterCategories.includes(q.category)) return false;
     if (search) return q.text.toLowerCase().includes(search) || q.author.toLowerCase().includes(search);
     return true;
   });
+  unlockedQuotes = sortQuotes(unlockedQuotes, state.listSort, state.listSortDir);
 
   const totalLocked = state.quotes.length - unlockedIds.length;
   document.getElementById('progress-count').textContent = `${unlockedIds.length} / ${state.quotes.length}`;
   document.getElementById('progress-fill').style.width = state.quotes.length > 0 ? `${(unlockedIds.length / state.quotes.length) * 100}%` : '0%';
 
-  if (unlockedQuotes.length === 0 && (state.listFavoriteOnly || search || state.listFilter !== 'all')) {
+  if (unlockedQuotes.length === 0 && (state.listFavoriteOnly || search || !allCategoriesSelected)) {
     document.getElementById('quote-list').innerHTML = state.listFavoriteOnly
       ? '<div class="empty-state"><div class="empty-icon">☆</div><p>お気に入りがまだありません。<br>ホームの星マークで追加してください。</p></div>'
       : '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>';
@@ -353,7 +469,7 @@ function renderList() {
   }).join('');
 
   // 未解放の名言は鍵アイコン＋？？？（フィルターなしのときのみ表示）
-  if (!state.listFavoriteOnly && !search && state.listFilter === 'all') {
+  if (!state.listFavoriteOnly && !search && allCategoriesSelected) {
     for (let i = 0; i < totalLocked; i++) {
       html += `
         <div class="quote-list-item locked">
@@ -403,6 +519,7 @@ function renderManage() {
   if (search) {
     quotes = quotes.filter(q => q.text.toLowerCase().includes(search) || q.author.toLowerCase().includes(search));
   }
+  quotes = sortQuotes(quotes, state.manageSort, state.manageSortDir);
 
   if (quotes.length === 0) {
     document.getElementById('manage-list').innerHTML = search
@@ -464,7 +581,7 @@ function renderSettings() {
   const s = state.settings;
   document.getElementById('notif-toggle').checked = s.notificationEnabled;
   document.getElementById('notif-time').value = s.notificationTime;
-  ['historical', 'philosophy', 'business', 'sports'].forEach(cat => {
+  ['historical', 'philosophy', 'business', 'sports', 'special'].forEach(cat => {
     const el = document.getElementById(`cat-${cat}`);
     if (el) el.checked = s.activeCategories.includes(cat);
   });
@@ -490,15 +607,43 @@ function bindEvents() {
     renderManage();
   });
 
-  // 一覧：カテゴリフィルター
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.listFilter = btn.dataset.cat;
-      renderList();
-    });
+  // 一覧・管理：並び替え（自作ドロップダウン）
+  initSortDropdown('list-sort-dropdown', value => {
+    state.listSort = value;
+    renderList();
   });
+  initSortDropdown('manage-sort-dropdown', value => {
+    state.manageSort = value;
+    renderManage();
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.sort-dropdown.open').forEach(d => d.classList.remove('open'));
+  });
+
+  // 並び替え：昇順・降順の切り替え
+  document.getElementById('list-sort-direction').addEventListener('click', () => {
+    state.listSortDir = state.listSortDir === 'asc' ? 'desc' : 'asc';
+    updateSortDirectionBtn('list-sort-direction', state.listSortDir);
+    renderList();
+  });
+  document.getElementById('manage-sort-direction').addEventListener('click', () => {
+    state.manageSortDir = state.manageSortDir === 'asc' ? 'desc' : 'asc';
+    updateSortDirectionBtn('manage-sort-direction', state.manageSortDir);
+    renderManage();
+  });
+
+  // ページトップへ戻るボタン
+  const scrollTopBtn = document.getElementById('scroll-top-btn');
+  const mainEl = document.querySelector('main');
+  mainEl.addEventListener('scroll', () => {
+    scrollTopBtn.classList.toggle('show', mainEl.scrollTop > 300);
+  });
+  scrollTopBtn.addEventListener('click', () => {
+    mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // 一覧：カテゴリフィルター（複数選択ドロップダウン）
+  initCategoryFilterDropdown();
 
   // 一覧：お気に入り＋カードタップ（委譲）
   document.getElementById('quote-list').addEventListener('click', e => {
@@ -582,7 +727,7 @@ function bindEvents() {
   });
 
   // 設定：カテゴリ
-  ['historical', 'philosophy', 'business', 'sports'].forEach(cat => {
+  ['historical', 'philosophy', 'business', 'sports', 'special'].forEach(cat => {
     document.getElementById(`cat-${cat}`).addEventListener('change', e => {
       if (e.target.checked) {
         if (!state.settings.activeCategories.includes(cat)) state.settings.activeCategories.push(cat);
@@ -824,6 +969,16 @@ function openDetailModal(id) {
 
   document.getElementById('detail-diary-textarea').value = existing;
   document.getElementById('detail-diary-count').textContent = existing.length;
+
+  const detailBox = document.querySelector('.detail-modal-box');
+  if (q.characterImage) {
+    detailBox.classList.add('has-character-bg');
+    detailBox.style.setProperty('--char-bg-image', `url('${q.characterImage}')`);
+  } else {
+    detailBox.classList.remove('has-character-bg');
+    detailBox.style.removeProperty('--char-bg-image');
+  }
+
   document.getElementById('detail-modal-overlay').classList.add('open');
   lockBodyScroll();
 }
@@ -991,7 +1146,7 @@ function spawnRipple(btn, clientX, clientY) {
 
 function initRipple() {
   document.addEventListener('pointerdown', e => {
-    const btn = e.target.closest('.add-btn, .filter-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .admin-lock-btn');
+    const btn = e.target.closest('.add-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .admin-lock-btn');
     if (!btn) return;
     spawnRipple(btn, e.clientX, e.clientY);
   });

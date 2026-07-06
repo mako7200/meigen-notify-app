@@ -66,12 +66,36 @@
         <input type="search" class="search-box" id="list-search" placeholder="名言・著者名で検索...">
         <button class="fav-filter-btn" id="fav-filter-btn">☆</button>
       </div>
-      <div class="category-filter">
-        <button class="filter-btn active" data-cat="all">すべて</button>
-        <button class="filter-btn" data-cat="historical">偉人・歴史</button>
-        <button class="filter-btn" data-cat="philosophy">哲学・思想</button>
-        <button class="filter-btn" data-cat="business">ビジネス</button>
-        <button class="filter-btn" data-cat="sports">スポーツ</button>
+      <div class="sort-row sort-row-split">
+        <div class="sort-dropdown" id="category-filter-dropdown">
+          <button class="sort-dropdown-btn" type="button">
+            <span class="sort-dropdown-current" id="category-filter-label">すべて</span>
+            <svg class="sort-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul class="sort-dropdown-menu filter-checkbox-menu">
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="category-filter-checkbox" value="historical" checked>偉人・歴史</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="category-filter-checkbox" value="philosophy" checked>哲学・思想</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="category-filter-checkbox" value="business" checked>ビジネス・成功者</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="category-filter-checkbox" value="sports" checked>スポーツ選手</label></li>
+            <li><label class="filter-checkbox-row"><input type="checkbox" class="category-filter-checkbox" value="special" checked>特別枠</label></li>
+          </ul>
+        </div>
+        <div class="sort-controls">
+          <button class="sort-direction-btn asc" id="list-sort-direction" type="button" data-dir="asc" aria-label="昇順・降順の切り替え">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/></svg>
+          </button>
+          <div class="sort-dropdown" id="list-sort-dropdown">
+            <button class="sort-dropdown-btn" type="button">
+              <span class="sort-dropdown-current">入手順</span>
+              <svg class="sort-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="sort-dropdown-menu">
+              <li class="sort-dropdown-option active" data-value="default">入手順</li>
+              <li class="sort-dropdown-option" data-value="rarity">レア度</li>
+              <li class="sort-dropdown-option" data-value="author">著者名</li>
+            </ul>
+          </div>
+        </div>
       </div>
       <div class="progress-block">
         <div class="progress-label"><span>名言コレクション</span><span id="progress-count">0 / 0</span></div>
@@ -86,6 +110,22 @@
       <div class="search-row">
         <input type="search" class="search-box" id="manage-search" placeholder="名言・著者名で検索...">
       </div>
+      <div class="sort-row">
+        <button class="sort-direction-btn asc" id="manage-sort-direction" type="button" data-dir="asc" aria-label="昇順・降順の切り替え">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/></svg>
+        </button>
+        <div class="sort-dropdown" id="manage-sort-dropdown">
+          <button class="sort-dropdown-btn" type="button">
+            <span class="sort-dropdown-current">入手順</span>
+            <svg class="sort-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul class="sort-dropdown-menu">
+            <li class="sort-dropdown-option active" data-value="default">入手順</li>
+            <li class="sort-dropdown-option" data-value="rarity">レア度</li>
+            <li class="sort-dropdown-option" data-value="author">著者名</li>
+          </ul>
+        </div>
+      </div>
       <button class="add-btn" id="add-quote-btn" style="display:none">
         + 名言を追加する
       </button>
@@ -95,8 +135,11 @@
     <!-- 設定タブ -->
     <section id="tab-settings" class="tab-section">
 
-      <div class="settings-section">
-        <div class="settings-section-title">通知設定</div>
+      <details class="settings-section">
+        <summary class="settings-section-title accordion-summary">
+          <span>通知設定</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
 
         <div class="settings-row">
           <div>
@@ -118,7 +161,7 @@
         </div>
 
         <div class="settings-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-          <button id="test-notif-btn" style="padding:10px 20px; background:var(--bg-warm); border:1.5px solid var(--border); border-radius:10px; font-size:0.9rem; cursor:pointer; color:var(--text-sub);">
+          <button id="test-notif-btn" class="settings-action-btn">
             テスト通知を送る
           </button>
           <div class="notification-note">
@@ -127,10 +170,13 @@
             iOS 16.4以上が必要です。通知はアプリを開いたときに届きます。
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="settings-section">
-        <div class="settings-section-title">カテゴリ設定（表示・通知対象）</div>
+      <details class="settings-section">
+        <summary class="settings-section-title accordion-summary">
+          <span>カテゴリ設定（表示・通知対象）</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
 
         <div class="settings-row">
           <label class="category-check">
@@ -156,31 +202,47 @@
             スポーツ選手
           </label>
         </div>
-      </div>
+        <div class="settings-row">
+          <label class="category-check">
+            <input type="checkbox" id="cat-special" checked>
+            特別枠
+          </label>
+        </div>
+      </details>
 
-      <div class="settings-section">
-        <div class="settings-section-title">着せ替え</div>
+      <details class="settings-section">
+        <summary class="settings-section-title accordion-summary">
+          <span>着せ替え</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
         <div class="theme-swatch-list" id="theme-swatch-list"></div>
-      </div>
+      </details>
 
-      <div class="settings-section">
-        <div class="settings-section-title">アプリ情報</div>
+      <details class="settings-section">
+        <summary class="settings-section-title accordion-summary">
+          <span>アプリ情報</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.8.0</div>
+            <div class="settings-sublabel">Version 2.9.0</div>
           </div>
-          <button id="check-update-btn" style="padding:8px 14px; background:var(--bg-warm); border:1.5px solid var(--border); border-radius:10px; font-size:0.78rem; cursor:pointer; color:var(--text-sub); white-space:nowrap;">
+          <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
           </button>
         </div>
         <div class="settings-row">
           <div class="settings-label" id="quotes-total-count"></div>
         </div>
-      </div>
+      </details>
 
     </section>
   </main>
+
+  <button class="scroll-top-btn" id="scroll-top-btn" aria-label="ページトップへ戻る">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
 
   <!-- ボトムナビゲーション -->
   <nav>
@@ -221,7 +283,7 @@
 
 <!-- 名言追加・編集モーダル -->
 <div class="modal-overlay" id="modal-overlay">
-  <div class="modal">
+  <div class="modal dark-form-modal-box">
     <div class="modal-title" id="modal-title">名言を追加</div>
     <div class="form-group">
       <label class="form-label">名言・格言</label>
@@ -238,6 +300,7 @@
         <option value="philosophy">哲学・思想家</option>
         <option value="business">ビジネス・成功者</option>
         <option value="sports">スポーツ選手</option>
+        <option value="special">特別枠（一覧・設定に非表示）</option>
       </select>
     </div>
     <div class="form-group">
@@ -268,15 +331,15 @@
 
 <!-- 管理者PINモーダル -->
 <div class="modal-overlay" id="admin-pin-overlay">
-  <div class="modal">
+  <div class="modal dark-form-modal-box">
     <div class="modal-title">管理者モード</div>
     <div class="form-group">
       <label class="form-label">PINコードを入力してください</label>
       <input type="password" inputmode="numeric" class="form-input" id="admin-pin-input" placeholder="PINコード">
     </div>
     <div class="modal-actions">
-      <button class="btn-cancel" id="admin-pin-cancel">キャンセル</button>
-      <button class="btn-save" id="admin-pin-submit">解除する</button>
+      <button class="btn-cancel" id="admin-pin-cancel">Cancel</button>
+      <button class="btn-save admin-pin-unlock-btn" id="admin-pin-submit">Unlock</button>
     </div>
   </div>
 </div>
