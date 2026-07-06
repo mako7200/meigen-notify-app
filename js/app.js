@@ -656,6 +656,9 @@ function bindEvents() {
   // 通知テスト
   document.getElementById('test-notif-btn').addEventListener('click', testNotification);
 
+  // 設定：最新バージョンを手動確認
+  document.getElementById('check-update-btn').addEventListener('click', checkForUpdatesManually);
+
   // 管理者：次の名言（テスト表示、実際の解放状況には影響しない）
   document.getElementById('admin-next-quote-btn').addEventListener('click', () => {
     if (!state.isAdmin || state.quotes.length === 0) return;
@@ -946,6 +949,21 @@ function registerServiceWorker() {
       });
     })
     .catch(err => console.warn('SW登録失敗:', err));
+}
+
+function checkForUpdatesManually() {
+  if (!('serviceWorker' in navigator)) { showToast('この環境では更新確認ができません'); return; }
+  showToast('確認中...');
+  navigator.serviceWorker.getRegistration().then(reg => {
+    if (!reg) { showToast('確認できませんでした'); return; }
+    reg.update().then(() => {
+      setTimeout(() => {
+        const banner = document.getElementById('update-banner');
+        if (reg.waiting || banner.classList.contains('show')) return;
+        showToast('最新バージョンです');
+      }, 1500);
+    }).catch(() => showToast('確認に失敗しました。通信状況をご確認ください'));
+  });
 }
 
 function showUpdateBanner(worker) {
