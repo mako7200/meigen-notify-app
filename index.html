@@ -51,7 +51,6 @@
       <div id="home-quote-area"></div>
       <div id="bonus-area"></div>
       <button class="admin-next-btn" id="admin-next-quote-btn" style="display:none;">次の名言（管理者テスト表示）</button>
-      <img id="cat-widget" class="cat-widget" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
     </section>
 
     <!-- 一覧タブ -->
@@ -213,13 +212,30 @@
 
       <details class="settings-section">
         <summary class="settings-section-title accordion-summary">
+          <span>その他</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">猫の表示</div>
+            <div class="settings-sublabel">画面左下に常駐する猫を表示します</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="cat-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </details>
+
+      <details class="settings-section">
+        <summary class="settings-section-title accordion-summary">
           <span>アプリ情報</span>
           <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         </summary>
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.15.0</div>
+            <div class="settings-sublabel">Version 2.16.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -236,6 +252,8 @@
   <button class="scroll-top-btn" id="scroll-top-btn" aria-label="ページトップへ戻る">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
   </button>
+
+  <img id="cat-widget" class="cat-widget" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
 
   <!-- ボトムナビゲーション -->
   <div class="nav-aura" id="nav-aura">

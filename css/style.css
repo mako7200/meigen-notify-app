@@ -1071,15 +1071,19 @@ main {
 
 .cat-widget {
   position: fixed;
-  right: 16px;
+  left: 26px;
   bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
-  width: 36px;
-  height: 36px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   image-rendering: pixelated;
   cursor: pointer;
   z-index: 45;
   filter: drop-shadow(0 3px 5px rgba(0,0,0,0.5));
+}
+
+.cat-widget.hidden {
+  display: none;
 }
 
 .cat-widget.cat-awake, .cat-widget.cat-yawn {

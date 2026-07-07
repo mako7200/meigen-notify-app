@@ -312,7 +312,7 @@ const Storage = {
     return result;
   },
   getSettings() {
-    const defaults = { notificationTime: '07:00', notificationEnabled: false, theme: 'default' };
+    const defaults = { notificationTime: '07:00', notificationEnabled: false, theme: 'default', catEnabled: true };
     const saved = localStorage.getItem('meigen_settings');
     if (saved) return { ...defaults, ...JSON.parse(saved) };
     return defaults;
@@ -803,6 +803,7 @@ function renderSettings() {
   const s = state.settings;
   document.getElementById('notif-toggle').checked = s.notificationEnabled;
   document.getElementById('notif-time').value = s.notificationTime;
+  document.getElementById('cat-toggle').checked = s.catEnabled;
   renderThemeSwatches();
 }
 
@@ -942,6 +943,13 @@ function bindEvents() {
     Storage.saveSettings(state.settings);
     updateNotificationSchedule();
     showToast(e.target.checked ? '通知をオンにしました' : '通知をオフにしました');
+  });
+
+  // 設定：猫の表示トグル
+  document.getElementById('cat-toggle').addEventListener('change', e => {
+    state.settings.catEnabled = e.target.checked;
+    Storage.saveSettings(state.settings);
+    updateCatVisibility();
   });
 
   // 設定：通知時間
@@ -1422,6 +1430,7 @@ function setCatState(nextState) {
 
 // 気まぐれに寝たり起きたりを繰り返す（大半は眠り、あくびは稀）
 function scheduleCatIdle() {
+  if (!state.settings.catEnabled) return;
   clearTimeout(catIdleTimer);
   clearTimeout(catActionTimer);
   setCatState('sleeping');
@@ -1436,7 +1445,7 @@ function scheduleCatIdle() {
 
 // タップ、またはレア以上の名言解放時に強制的に起こす
 function wakeCat() {
-  if (!document.getElementById('cat-widget')) return;
+  if (!state.settings.catEnabled || !document.getElementById('cat-widget')) return;
   clearTimeout(catIdleTimer);
   clearTimeout(catActionTimer);
   setCatState('awake');
@@ -1448,11 +1457,25 @@ function wakeCatIfRareReveal() {
   setTimeout(wakeCat, typewriterDuration(state.currentQuote.text));
 }
 
+// 設定の「猫の表示」トグルに応じて表示/非表示を切り替える
+function updateCatVisibility() {
+  const el = document.getElementById('cat-widget');
+  if (!el) return;
+  if (state.settings.catEnabled) {
+    el.classList.remove('hidden');
+    scheduleCatIdle();
+  } else {
+    el.classList.add('hidden');
+    clearTimeout(catIdleTimer);
+    clearTimeout(catActionTimer);
+  }
+}
+
 function initCatWidget() {
   const el = document.getElementById('cat-widget');
   if (!el) return;
   el.addEventListener('click', wakeCat);
-  scheduleCatIdle();
+  updateCatVisibility();
 }
 
 // ── お気に入り ────────────────────────────────────────────
