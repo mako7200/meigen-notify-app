@@ -32,7 +32,10 @@
 }
 
 .splash-icon {
-  font-size: 3.5rem;
+  font-size: 5rem;
+  font-family: Georgia, serif;
+  color: var(--primary-light);
+  line-height: 1;
   animation: splashIn 0.8s ease forwards;
 }
 
@@ -105,10 +108,6 @@ header .header-title {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-header .header-icon {
-  font-size: 1.3rem;
 }
 
 /* 更新バナー */
@@ -1070,6 +1069,28 @@ main {
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
+.cat-widget {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  cursor: pointer;
+  z-index: 45;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.5));
+}
+
+.cat-widget.cat-awake, .cat-widget.cat-yawn {
+  animation: catEyeFade 0.25s ease-out;
+}
+
+@keyframes catEyeFade {
+  from { opacity: 0.35; }
+  to   { opacity: 1; }
+}
+
 .scroll-top-btn.show {
   display: flex;
 }
@@ -1373,6 +1394,28 @@ main {
   transition: transform 0.2s ease;
 }
 
+.settings-title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-current-icon {
+  display: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: top center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.theme-current-icon.visible {
+  display: block;
+}
+
 details[open] > .accordion-summary .accordion-caret {
   transform: rotate(180deg);
 }
@@ -1604,6 +1647,13 @@ html[data-theme="aizen"] nav {
   background-size: 300% 100%;
   animation: navWaterSurge 15s ease-in-out infinite;
   border-top-color: rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme="aizen"] header {
+  background: linear-gradient(90deg, #0a0612, #2c0f52, #14063a, #3a1560, #0a0612);
+  background-size: 300% 100%;
+  animation: navWaterSurge 15s ease-in-out infinite;
+  border-bottom-color: rgba(0, 0, 0, 0.6);
 }
 
 @keyframes navWaterSurge {
@@ -1978,8 +2028,8 @@ html[data-theme="aizen"] nav {
 
 /* ── 詳細モーダル ────────────────────────────────────── */
 .detail-modal-box {
-  width: 400px;
-  max-width: 90vw;
+  width: 440px;
+  max-width: 94vw;
   padding-top: 40px;
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(20px);

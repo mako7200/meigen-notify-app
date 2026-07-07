@@ -200,6 +200,7 @@ const THEMES = {
   default: {
     label: 'デフォルト',
     unlockId: null,
+    icon: null,
     stops: '#090627, #14063a, #0d1a4a, #1a0a3d',
     bgSize: '400% 400%',
     speed: '12s'
@@ -207,6 +208,7 @@ const THEMES = {
   aizen: {
     label: '藍染',
     unlockId: 101,
+    icon: 'images/characters/aizen.png',
     stops: '#050208 0%, #4A1580 30%, #3E3A2A 45%, #1A0838 65%, #050208 100%',
     bgSize: '500% 500%',
     speed: '36s'
@@ -214,6 +216,7 @@ const THEMES = {
   giorno: {
     label: 'ジョルノ',
     unlockId: 102,
+    icon: 'images/characters/giorno.png',
     stops: '#020805 0%, #0F5C36 30%, #423C22 45%, #0A2818 65%, #020805 100%',
     bgSize: '500% 500%',
     speed: '36s'
@@ -221,6 +224,7 @@ const THEMES = {
   tanaka: {
     label: '田中',
     unlockId: 103,
+    icon: 'images/characters/tanaka.png',
     stops: '#050505 0%, #6B2400 30%, #3A2E22 45%, #1A0F08 65%, #050505 100%',
     bgSize: '500% 500%',
     speed: '36s'
@@ -259,6 +263,16 @@ function renderThemeSwatches() {
       </button>
     `;
   }).join('');
+
+  const currentTheme = THEMES[state.settings.theme] || THEMES.default;
+  const currentIcon = document.getElementById('theme-current-icon');
+  if (currentTheme.icon) {
+    currentIcon.style.backgroundImage = `url('${currentTheme.icon}')`;
+    currentIcon.classList.add('visible');
+  } else {
+    currentIcon.style.backgroundImage = '';
+    currentIcon.classList.remove('visible');
+  }
 }
 
 const Storage = {
@@ -370,6 +384,7 @@ function init() {
   initRipple();
   initSplash();
   initInstallBanner();
+  initCatWidget();
   registerServiceWorker();
   checkMorningNotification();
 
@@ -552,6 +567,9 @@ function renderBonusArea() {
         const quoteCard = document.getElementById('quote-card');
         if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
       }, typewriterDuration(bonusQuote.text));
+    }
+    if (bonusQuote.rarity) {
+      setTimeout(wakeCat, typewriterDuration(bonusQuote.text));
     }
   });
 }
@@ -1363,6 +1381,7 @@ function initSplash() {
       const el = document.getElementById('quote-text');
       if (el && state.currentQuote) typewriter(el, state.currentQuote.text);
       revealMythicIfNeeded();
+      wakeCatIfRareReveal();
     }
   });
 }
@@ -1379,6 +1398,61 @@ function revealMythicIfNeeded() {
     const card = document.getElementById('quote-card');
     if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
   }, typewriterDuration(state.currentQuote.text) + 400);
+}
+
+// ── 猫ウィジェット ────────────────────────────────────────
+const CAT_IMG = {
+  sleeping: 'images/animals/cat_sleeping_dot_transparent.png',
+  awake:    'images/animals/cat_awake_dot_transparent.png',
+  yawn:     'images/animals/cat_yawn_dot_transparent.png'
+};
+let catIdleTimer = null;
+let catActionTimer = null;
+
+function setCatState(nextState) {
+  const el = document.getElementById('cat-widget');
+  if (!el) return;
+  el.src = CAT_IMG[nextState];
+  el.classList.remove('cat-awake', 'cat-yawn');
+  if (nextState !== 'sleeping') {
+    void el.offsetWidth; // アニメーションを再生させるための強制リフロー
+    el.classList.add(nextState === 'awake' ? 'cat-awake' : 'cat-yawn');
+  }
+}
+
+// 気まぐれに寝たり起きたりを繰り返す（大半は眠り、あくびは稀）
+function scheduleCatIdle() {
+  clearTimeout(catIdleTimer);
+  clearTimeout(catActionTimer);
+  setCatState('sleeping');
+  const sleepTime = 8000 + Math.random() * 8000;
+  catIdleTimer = setTimeout(() => {
+    const action = Math.random() < 0.15 ? 'yawn' : 'awake';
+    setCatState(action);
+    const actionTime = action === 'yawn' ? 1200 + Math.random() * 800 : 800 + Math.random() * 700;
+    catActionTimer = setTimeout(scheduleCatIdle, actionTime);
+  }, sleepTime);
+}
+
+// タップ、またはレア以上の名言解放時に強制的に起こす
+function wakeCat() {
+  if (!document.getElementById('cat-widget')) return;
+  clearTimeout(catIdleTimer);
+  clearTimeout(catActionTimer);
+  setCatState('awake');
+  catActionTimer = setTimeout(scheduleCatIdle, 1500);
+}
+
+function wakeCatIfRareReveal() {
+  if (!dailyQuoteJustRevealed || !state.currentQuote || !state.currentQuote.rarity) return;
+  setTimeout(wakeCat, typewriterDuration(state.currentQuote.text));
+}
+
+function initCatWidget() {
+  const el = document.getElementById('cat-widget');
+  if (!el) return;
+  el.addEventListener('click', wakeCat);
+  scheduleCatIdle();
 }
 
 // ── お気に入り ────────────────────────────────────────────

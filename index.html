@@ -22,7 +22,7 @@
 </head>
 <body>
 <div id="splash">
-  <div class="splash-icon">📜</div>
+  <div class="splash-icon">&ldquo;</div>
   <div class="splash-title">今日の名言</div>
 </div>
 
@@ -31,7 +31,6 @@
   <!-- ヘッダー -->
   <header>
     <div class="header-title">
-      <span class="header-icon">📜</span>
       <span id="header-title-text">ホーム</span>
     </div>
   </header>
@@ -52,6 +51,7 @@
       <div id="home-quote-area"></div>
       <div id="bonus-area"></div>
       <button class="admin-next-btn" id="admin-next-quote-btn" style="display:none;">次の名言（管理者テスト表示）</button>
+      <img id="cat-widget" class="cat-widget" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
     </section>
 
     <!-- 一覧タブ -->
@@ -202,7 +202,10 @@
 
       <details class="settings-section">
         <summary class="settings-section-title accordion-summary">
-          <span>着せ替え</span>
+          <span class="settings-title-left">
+            <span>着せ替え</span>
+            <span class="theme-current-icon" id="theme-current-icon"></span>
+          </span>
           <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         </summary>
         <div class="theme-swatch-list" id="theme-swatch-list"></div>
@@ -216,7 +219,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.14.0</div>
+            <div class="settings-sublabel">Version 2.15.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
