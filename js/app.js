@@ -410,7 +410,9 @@ function getDailyQuote() {
 }
 
 // ── 連続ログインボーナス ──────────────────────────────────
-const BONUS_INTERVAL = 3;
+// 10日を1周期とし、周期内の3日目・7日目・10日目にボーナスが発生する
+const BONUS_CYCLE = 10;
+const BONUS_MILESTONES = [3, 7, 10];
 
 function updateStreak() {
   const today = new Date().toDateString();
@@ -424,8 +426,25 @@ function updateStreak() {
   state.streak = streak.count;
 }
 
+function getCyclePosition(streak) {
+  const pos = streak % BONUS_CYCLE;
+  return pos === 0 ? BONUS_CYCLE : pos;
+}
+
+function getBonusMilestone(streak) {
+  if (streak <= 0) return null;
+  const pos = getCyclePosition(streak);
+  return BONUS_MILESTONES.includes(pos) ? pos : null;
+}
+
 function isBonusDay() {
-  return state.streak > 0 && state.streak % BONUS_INTERVAL === 0;
+  return getBonusMilestone(state.streak) !== null;
+}
+
+function daysUntilNextBonus(streak) {
+  const pos = getCyclePosition(streak);
+  const next = BONUS_MILESTONES.find(m => m > pos);
+  return (next !== undefined ? next : BONUS_CYCLE + BONUS_MILESTONES[0]) - pos;
 }
 
 function getTodaysBonusRecord() {
@@ -434,19 +453,41 @@ function getTodaysBonusRecord() {
   return (record && record.date === today) ? record : null;
 }
 
+// 節目ごとの確定レア度条件（該当カードが尽きていたら通常抽選2枚にフォールバック）
+function milestoneRarityFilter(milestone) {
+  if (milestone === 3) return q => !!q.rarity; // レア以上（ノーマル以外）
+  if (milestone === 7) return q => ['super_rare', 'ultra_rare', 'secret_rare', 'mythic'].includes(q.rarity);
+  if (milestone === 10) return q => q.rarity === 'ultra_rare'; // ウルトラレアちょうど
+  return () => true;
+}
+
 function claimBonusQuote() {
   const today = new Date().toDateString();
+  const milestone = getBonusMilestone(state.streak);
   const unlockedIds = state.unlocked.map(u => u.id);
-  let pool = state.quotes.filter(q => !unlockedIds.includes(q.id));
+  const filterFn = milestoneRarityFilter(milestone);
+
+  let pool = state.quotes.filter(q => !unlockedIds.includes(q.id) && filterFn(q));
+  let drawCount = 1;
+  if (pool.length === 0) {
+    // 対象レア度を集め尽くしている場合は、レア度を問わず2枚引けるボーナスに切り替え
+    pool = state.quotes.filter(q => !unlockedIds.includes(q.id));
+    drawCount = 2;
+  }
   if (pool.length === 0) pool = [...state.quotes]; // 全部見たらリセット
 
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
-  if (!state.unlocked.find(u => u.id === chosen.id)) {
-    state.unlocked.push({ id: chosen.id, date: today });
-    Storage.saveUnlocked(state.unlocked);
+  const chosenList = [];
+  for (let i = 0; i < drawCount && pool.length > 0; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    const chosen = pool.splice(idx, 1)[0];
+    chosenList.push(chosen);
+    if (!state.unlocked.find(u => u.id === chosen.id)) {
+      state.unlocked.push({ id: chosen.id, date: today });
+    }
   }
-  Storage.saveBonusRecord({ date: today, quoteId: chosen.id });
-  return chosen;
+  Storage.saveUnlocked(state.unlocked);
+  Storage.saveBonusRecord({ date: today, quoteIds: chosenList.map(q => q.id) });
+  return chosenList;
 }
 
 function renderStreakIndicator() {
@@ -454,14 +495,26 @@ function renderStreakIndicator() {
   if (!el) return;
   if (state.streak <= 0) { el.innerHTML = ''; return; }
 
-  let text = `${state.streak}日連続ログイン中`;
-  if (isBonusDay()) {
-    if (getTodaysBonusRecord()) text += '（今日のボーナスは受け取り済み）';
-  } else {
-    const daysUntilBonus = BONUS_INTERVAL - (state.streak % BONUS_INTERVAL);
-    text += `（あと${daysUntilBonus}日でボーナス！）`;
+  const pos = getCyclePosition(state.streak);
+  const claimedToday = isBonusDay() && !!getTodaysBonusRecord();
+  const dots = [];
+  for (let day = 1; day <= BONUS_CYCLE; day++) {
+    const isMilestone = BONUS_MILESTONES.includes(day);
+    let cls = 'streak-dot' + (isMilestone ? ` milestone milestone-${day}` : '');
+    if (day < pos || (day === pos && (!isMilestone || claimedToday))) cls += ' done';
+    else if (day === pos) cls += ' current';
+    dots.push(`<span class="${cls}"></span>`);
   }
-  el.innerHTML = `<span class="streak-flame">🔥</span> ${text}`;
+
+  const sub = isBonusDay()
+    ? (claimedToday ? '受取済み' : '本日ボーナス対象')
+    : `あと${daysUntilNextBonus(state.streak)}日`;
+
+  el.innerHTML = `
+    <span class="streak-dots">${dots.join('')}</span>
+    <span class="streak-main">ログイン ${state.streak}日目</span>
+    <span class="streak-sub">・ ${sub}</span>
+  `;
 }
 
 function renderBonusArea() {
@@ -480,11 +533,15 @@ function renderBonusArea() {
     </button>
   `;
   document.getElementById('bonus-claim-btn').addEventListener('click', () => {
-    const bonusQuote = claimBonusQuote();
+    const bonusQuotes = claimBonusQuote();
+    const bonusQuote = bonusQuotes[0];
     state.currentQuote = bonusQuote;
     renderHome();
     renderList();
     renderManage();
+    if (bonusQuotes.length > 1) {
+      showToast(`条件のレア度を集め尽くしていたため、代わりに${bonusQuotes.length}枚解放しました`);
+    }
     if (bonusQuote.rarity === 'mythic') {
       setTimeout(() => {
         playMythicSound();
