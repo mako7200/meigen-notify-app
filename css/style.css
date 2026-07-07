@@ -1561,6 +1561,57 @@ nav {
   overflow: hidden;
 }
 
+/* 藍染テーマ：フッターに霊圧の演出を追加 */
+.nav-aura {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  height: 260px;
+  z-index: 49;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+html[data-theme="aizen"] .nav-aura {
+  display: block;
+}
+
+.nav-wisp {
+  position: absolute;
+  bottom: 0;
+  width: 40px;
+  margin-left: -12px;
+  height: 120px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+  border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+  filter: blur(8px);
+  transform-origin: bottom center;
+  animation: navWispRise 18s ease-in-out infinite;
+}
+
+@keyframes navWispRise {
+  0%     { transform: scaleY(0.05) skewX(0deg); opacity: 0; }
+  16.67% { transform: scaleY(0.9) skewX(-4deg); opacity: 1; }
+  40%    { transform: scaleY(0.9) skewX(4deg); opacity: 1; }
+  72%    { transform: scaleY(0.9) skewX(-4deg); opacity: 1; }
+  100%   { transform: scaleY(0.05) skewX(0deg); opacity: 0; }
+}
+
+html[data-theme="aizen"] nav {
+  background: linear-gradient(90deg, #0a0612, #2c0f52, #14063a, #3a1560, #0a0612);
+  background-size: 300% 100%;
+  animation: navWaterSurge 15s ease-in-out infinite;
+  border-top-color: rgba(0, 0, 0, 0.6);
+}
+
+@keyframes navWaterSurge {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 0%; }
+  100% { background-position: 0% 0%; }
+}
+
 .nav-btn {
   flex: 1;
   display: flex;

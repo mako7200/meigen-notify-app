@@ -233,6 +233,7 @@ function applyTheme(key) {
   root.setProperty('--theme-stops', theme.stops);
   root.setProperty('--theme-bg-size', theme.bgSize);
   root.setProperty('--theme-speed', theme.speed);
+  document.documentElement.dataset.theme = key;
 }
 
 function isThemeUnlocked(key) {
