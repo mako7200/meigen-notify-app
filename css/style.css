@@ -667,21 +667,24 @@ main {
 
 /* 連続ログインインジケーター */
 .streak-indicator {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.streak-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  color: rgba(255, 248, 230, 0.7);
-  font-size: 0.8rem;
-  margin-bottom: 10px;
-  padding-left: 4px;
-  min-height: 1.2em;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
 }
 
 .streak-dots {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-right: 2px;
 }
 
 .streak-dot {
@@ -758,12 +761,14 @@ main {
 }
 
 .streak-main {
+  font-size: 0.82rem;
   font-weight: bold;
   color: rgba(255, 248, 230, 0.9);
 }
 
 .streak-sub {
-  color: rgba(255, 248, 230, 0.5);
+  font-size: 0.72rem;
+  color: rgba(255, 248, 230, 0.45);
 }
 
 /* ログインボーナスバナー（未受取） */
@@ -2030,7 +2035,6 @@ nav {
   line-height: 1.85;
   color: var(--text);
   margin-bottom: 10px;
-  font-style: italic;
 }
 
 .detail-quote-author {

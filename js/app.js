@@ -493,7 +493,8 @@ function claimBonusQuote() {
 function renderStreakIndicator() {
   const el = document.getElementById('streak-indicator');
   if (!el) return;
-  if (state.streak <= 0) { el.innerHTML = ''; return; }
+  if (state.streak <= 0) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = 'block';
 
   const pos = getCyclePosition(state.streak);
   const claimedToday = isBonusDay() && !!getTodaysBonusRecord();
@@ -507,13 +508,15 @@ function renderStreakIndicator() {
   }
 
   const sub = isBonusDay()
-    ? (claimedToday ? '受取済み' : '本日ボーナス対象')
+    ? (claimedToday ? '受取済み' : '')
     : `あと${daysUntilNextBonus(state.streak)}日`;
 
   el.innerHTML = `
-    <span class="streak-dots">${dots.join('')}</span>
-    <span class="streak-main">ログイン ${state.streak}日目</span>
-    <span class="streak-sub">・ ${sub}</span>
+    <div class="streak-row">
+      <span class="streak-main">ログイン ${state.streak}日目</span>
+      ${sub ? `<span class="streak-sub">${sub}</span>` : ''}
+    </div>
+    <div class="streak-dots">${dots.join('')}</div>
   `;
 }
 
