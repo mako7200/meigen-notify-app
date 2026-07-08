@@ -227,7 +227,7 @@
 
       <details class="settings-section">
         <summary class="settings-section-title accordion-summary">
-          <span>その他</span>
+          <span>相棒</span>
           <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         </summary>
         <div class="settings-row">
@@ -240,6 +240,31 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div class="settings-row-affection">
+          <div class="affection-header">
+            <div>
+              <div class="settings-label">猫の懐き度</div>
+              <div class="settings-sublabel">猫をタップして仲良くなろう</div>
+            </div>
+            <span class="affection-level" id="cat-affection-level">Lv.1</span>
+          </div>
+          <div class="affection-track">
+            <div class="affection-fill" id="cat-affection-fill" style="width:0%"></div>
+          </div>
+          <div class="affection-count" id="cat-affection-count">0 / 20pt</div>
+        </div>
+        <div class="settings-row-test" id="companion-test-row" style="display:none;">
+          <div class="settings-label">反応テスト（管理者用）</div>
+          <div class="settings-sublabel">実データに影響を与えず、反応の見た目だけ確認できます</div>
+          <div class="companion-test-buttons" id="companion-test-buttons"></div>
+        </div>
+      </details>
+
+      <details class="settings-section">
+        <summary class="settings-section-title accordion-summary">
+          <span>その他</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
         <div class="settings-row">
           <div>
             <div class="settings-label">管理者モード</div>
@@ -259,7 +284,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.20.1</div>
+            <div class="settings-sublabel">Version 2.21.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認

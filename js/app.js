@@ -594,7 +594,10 @@ const Storage = {
   saveBonusRecord(r) { localStorage.setItem('meigen_bonus', JSON.stringify(r)); },
   // 解放済み季節限定テーマ一覧 [key, ...]
   getSeasonalUnlocked() { const s = localStorage.getItem('meigen_seasonal_unlocked'); return s ? JSON.parse(s) : []; },
-  saveSeasonalUnlocked(list) { localStorage.setItem('meigen_seasonal_unlocked', JSON.stringify(list)); }
+  saveSeasonalUnlocked(list) { localStorage.setItem('meigen_seasonal_unlocked', JSON.stringify(list)); },
+  // 猫の懐き度 { total, todayDate, todayCount }
+  getCatAffection() { const s = localStorage.getItem('meigen_cat_affection'); return s ? JSON.parse(s) : { total: 0, todayDate: '', todayCount: 0 }; },
+  saveCatAffection(a) { localStorage.setItem('meigen_cat_affection', JSON.stringify(a)); }
 };
 
 // ── アプリ状態 ────────────────────────────────────────────
@@ -618,7 +621,8 @@ let state = {
   diary: {},      // { [quoteId]: "text" }
   isAdmin: false, // セッション中のみ有効（再読み込みでリセット）
   streak: 0,
-  seasonalUnlocked: [] // 解放済み季節限定テーマのキー一覧
+  seasonalUnlocked: [], // 解放済み季節限定テーマのキー一覧
+  catAffection: { total: 0, todayDate: '', todayCount: 0 }
 };
 
 let typewriterTimer = null;
@@ -632,6 +636,7 @@ function init() {
   state.unlocked  = Storage.getUnlocked();
   state.diary     = Storage.getDiary();
   state.seasonalUnlocked = Storage.getSeasonalUnlocked();
+  state.catAffection = Storage.getCatAffection();
   updateStreak();
   state.currentQuote = getDailyQuote();
   checkSeasonalThemeUnlocks();
@@ -767,6 +772,8 @@ function claimBonusQuote() {
   return chosenList;
 }
 
+const STREAK_MILESTONE_TIER = { 3: 'r', 7: 'sr', 10: 'ur' };
+
 function renderStreakIndicator() {
   const el = document.getElementById('streak-indicator');
   if (!el) return;
@@ -775,28 +782,32 @@ function renderStreakIndicator() {
 
   const pos = getCyclePosition(state.streak);
   const claimedToday = isBonusDay() && !!getTodaysBonusRecord();
+  const fillPct = ((pos - 1) / (BONUS_CYCLE - 1)) * 100;
+
   const dots = [];
   for (let day = 1; day <= BONUS_CYCLE; day++) {
-    const isMilestone = BONUS_MILESTONES.includes(day);
-    let cls = 'streak-dot' + (isMilestone ? ` milestone milestone-${day}` : '');
-    if (day < pos || (day === pos && (!isMilestone || claimedToday))) cls += ' done';
-    else if (day === pos) cls += ' current';
-    dots.push(`<span class="${cls}"></span>`);
+    if (day === pos) continue;
+    const tier = STREAK_MILESTONE_TIER[day];
+    const leftPct = ((day - 1) / (BONUS_CYCLE - 1)) * 100;
+    let cls = 'streak-dot' + (tier ? ` tier-${tier}` : '');
+    if (day < pos || (day === pos && claimedToday)) cls += ' done';
+    dots.push(`<span class="${cls}" style="left:${leftPct}%"></span>`);
   }
 
-  const sub = isBonusDay()
-    ? (claimedToday ? '受取済み' : '')
-    : `あと${daysUntilNextBonus(state.streak)}日`;
-
   el.innerHTML = `
-    <div class="streak-row">
-      <span class="streak-main-group">
-        <span class="streak-main">ログイン ${state.streak}日目</span>
-        <svg class="progress-label-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-      </span>
-      ${sub ? `<span class="streak-sub">${sub}</span>` : ''}
+    <div class="streak-top">
+      <span class="streak-badge">LOGIN BONUS</span>
+      <div class="streak-day">
+        <span class="cur">${pos}</span><span class="slash">/</span><span class="total">${BONUS_CYCLE}</span><span class="unit">日目</span>
+      </div>
     </div>
-    <div class="streak-dots">${dots.join('')}</div>
+    <div class="streak-line-wrap">
+      <div class="streak-line">
+        <div class="streak-line-fill" style="width:${fillPct}%"></div>
+        ${dots.join('')}
+        <div class="streak-current" style="left:${fillPct}%"></div>
+      </div>
+    </div>
   `;
 }
 
@@ -826,11 +837,13 @@ function openLoginModal() {
   for (let day = 1; day <= BONUS_CYCLE; day++) {
     const info = LOGIN_MILESTONE_INFO[day];
     const isCurrent = day === pos;
+    const isClaimable = isCurrent && !!info && !claimedToday;
     let cls = 'login-day-cell' + (info ? ` milestone ${info.cls}` : '');
     if (day < pos || (isCurrent && (!info || claimedToday))) cls += ' done';
     else if (isCurrent) cls += ' current';
+    if (isClaimable) cls += ' claimable';
     cells.push(`
-      <div class="${cls}">
+      <div class="${cls}"${isClaimable ? ' id="login-day-claim-cell"' : ''}>
         <span class="login-day-num">${day}</span>
         <span class="login-day-reward">${info ? info.reward : ''}</span>
       </div>
@@ -840,6 +853,14 @@ function openLoginModal() {
   document.getElementById('login-modal-rows').innerHTML = `
     <div class="login-day-grid">${cells.join('')}</div>
   `;
+
+  const claimCell = document.getElementById('login-day-claim-cell');
+  if (claimCell) {
+    claimCell.addEventListener('click', () => {
+      performBonusClaim();
+      closeLoginModal();
+    });
+  }
 
   document.getElementById('login-modal-cat-row').classList.toggle('hidden', !state.settings.catEnabled);
 
@@ -864,6 +885,29 @@ function closeLoginModal() {
   unlockBodyScroll();
 }
 
+// ログインボーナスの受け取り処理（Home画面のバナー・ログインモーダル内タップ、共通で呼び出す）
+function performBonusClaim() {
+  const bonusQuotes = claimBonusQuote();
+  const bonusQuote = bonusQuotes[0];
+  state.currentQuote = bonusQuote;
+  renderHome();
+  renderList();
+  renderManage();
+  if (bonusQuotes.length > 1) {
+    showToast(`条件のレア度を集め尽くしていたため、代わりに${bonusQuotes.length}枚解放しました`);
+  }
+  if (bonusQuote.rarity === 'mythic') {
+    setTimeout(() => {
+      playMythicSound();
+      const quoteCard = document.getElementById('quote-card');
+      if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
+    }, typewriterDuration(bonusQuote.text));
+  }
+  if (bonusQuote.rarity) {
+    setTimeout(wakeCat, typewriterDuration(bonusQuote.text));
+  }
+}
+
 function renderBonusArea() {
   const area = document.getElementById('bonus-area');
   if (!area) return;
@@ -879,27 +923,7 @@ function renderBonusArea() {
       <span class="bonus-arrow">›</span>
     </button>
   `;
-  document.getElementById('bonus-claim-btn').addEventListener('click', () => {
-    const bonusQuotes = claimBonusQuote();
-    const bonusQuote = bonusQuotes[0];
-    state.currentQuote = bonusQuote;
-    renderHome();
-    renderList();
-    renderManage();
-    if (bonusQuotes.length > 1) {
-      showToast(`条件のレア度を集め尽くしていたため、代わりに${bonusQuotes.length}枚解放しました`);
-    }
-    if (bonusQuote.rarity === 'mythic') {
-      setTimeout(() => {
-        playMythicSound();
-        const quoteCard = document.getElementById('quote-card');
-        if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
-      }, typewriterDuration(bonusQuote.text));
-    }
-    if (bonusQuote.rarity) {
-      setTimeout(wakeCat, typewriterDuration(bonusQuote.text));
-    }
-  });
+  document.getElementById('bonus-claim-btn').addEventListener('click', performBonusClaim);
 }
 
 // ── ホームタブ描画 ────────────────────────────────────────
@@ -1050,6 +1074,8 @@ function updateAdminLockUI() {
   document.getElementById('admin-settings-sublabel').textContent = state.isAdmin
     ? '管理者モード中です'
     : 'PINコードを入力して管理者モードにします';
+  renderCompanionTestRow();
+  renderThemeSwatches();
 }
 
 function toggleAdminLock() {
@@ -1148,6 +1174,7 @@ function renderSettings() {
   document.getElementById('cat-toggle').checked = s.catEnabled;
   renderThemeSwatches();
   updateAdminLockUI();
+  renderCatAffectionUI();
 }
 
 // ── イベントバインド ──────────────────────────────────────
@@ -1764,27 +1791,45 @@ function revealMythicIfNeeded() {
 
 // ── 猫ウィジェット ────────────────────────────────────────
 const CAT_IMG = {
-  sleeping: 'images/animals/cat_sleeping_dot_transparent.png',
-  awake:    'images/animals/cat_awake_dot_transparent.png',
-  yawn:     'images/animals/cat_yawn_dot_transparent.png'
+  sleeping:   'images/animals/cat_sleeping_dot_transparent.png',
+  awake:      'images/animals/cat_awake_dot_transparent.png',
+  yawn:       'images/animals/cat_yawn_dot_transparent.png',
+  grooming:   'images/animals/cat_grooming_dot_transparent.png',
+  stretching: 'images/animals/cat_stretching_dot_transparent.png'
 };
+const CAT_NON_SLEEP_STATES = ['cat-awake', 'cat-yawn', 'cat-grooming', 'cat-stretching'];
 let catIdleTimer = null;
 let catActionTimer = null;
 let catState = 'sleeping';
+let catInputLockedUntil = 0; // 見た目は変わらない「無視」反応後も、一定時間タップを受け付けないようにするためのタイムスタンプ
 
 function setCatState(nextState) {
   const el = document.getElementById('cat-widget');
   if (!el) return;
   catState = nextState;
   el.src = CAT_IMG[nextState];
-  el.classList.remove('cat-awake', 'cat-yawn');
+  el.classList.remove(...CAT_NON_SLEEP_STATES);
   if (nextState !== 'sleeping') {
     void el.offsetWidth; // アニメーションを再生させるための強制リフロー
-    el.classList.add(nextState === 'awake' ? 'cat-awake' : 'cat-yawn');
+    el.classList.add('cat-' + nextState);
   }
 }
 
-// 気まぐれに眠り続け、稀にあくびだけする（「起きる」は自動では発生させない）
+// 気まぐれな寝姿バリエーション（あくび・毛づくろい・伸び）。管理者テスト表示からも呼び出せるよう共通化
+const CAT_IDLE_ACTIONS = {
+  yawn:       { minDuration: 1200, maxDuration: 2000 },
+  grooming:   { minDuration: 2000, maxDuration: 3000 },
+  stretching: { minDuration: 2000, maxDuration: 3000 }
+};
+
+function triggerCatIdleAction(key) {
+  const { minDuration, maxDuration } = CAT_IDLE_ACTIONS[key];
+  setCatState(key);
+  const actionTime = minDuration + Math.random() * (maxDuration - minDuration);
+  catActionTimer = setTimeout(scheduleCatIdle, actionTime);
+}
+
+// 気まぐれに眠り続け、稀にあくび・毛づくろい・伸びをする（「起きる」は自動では発生させない）
 function scheduleCatIdle() {
   if (!state.settings.catEnabled) return;
   clearTimeout(catIdleTimer);
@@ -1792,13 +1837,11 @@ function scheduleCatIdle() {
   setCatState('sleeping');
   const sleepTime = 8000 + Math.random() * 8000;
   catIdleTimer = setTimeout(() => {
-    if (Math.random() < 0.15) {
-      setCatState('yawn');
-      const actionTime = 1200 + Math.random() * 800;
-      catActionTimer = setTimeout(scheduleCatIdle, actionTime);
-    } else {
-      scheduleCatIdle();
-    }
+    const roll = Math.random();
+    if (roll < 0.1) triggerCatIdleAction('yawn');
+    else if (roll < 0.15) triggerCatIdleAction('grooming');
+    else if (roll < 0.2) triggerCatIdleAction('stretching');
+    else scheduleCatIdle();
   }, sleepTime);
 }
 
@@ -1816,20 +1859,14 @@ function wakeCatIfRareReveal() {
   setTimeout(wakeCat, typewriterDuration(state.currentQuote.text));
 }
 
-// タップ（3回に1回）への反応：無視60% / どこかへ行く30% / スローまばたき10%
-function reactToTap() {
-  const el = document.getElementById('cat-widget');
-  if (!state.settings.catEnabled || !el) return;
-  clearTimeout(catIdleTimer);
-  clearTimeout(catActionTimer);
-
-  const roll = Math.random();
-  if (roll < 0.6) {
-    // 無視：ちらっと目を開けてすぐ寝る
-    setCatState('awake');
-    catActionTimer = setTimeout(scheduleCatIdle, 500);
-
-  } else if (roll < 0.9) {
+// タップへの反応。管理者テスト表示からも呼び出せるよう共通化
+const CAT_TAP_REACTIONS = {
+  ignore(el) {
+    // 無視：本当に何も反応しない（見た目は一切変えないが、連打で無限に消費できないよう一定時間タップを受け付けない）
+    catInputLockedUntil = Date.now() + 1000;
+    scheduleCatIdle();
+  },
+  away(el) {
     // どこかへ行ってしまう
     setCatState('awake');
     catActionTimer = setTimeout(() => {
@@ -1839,8 +1876,8 @@ function reactToTap() {
         scheduleCatIdle();
       }, 2500 + Math.random() * 1500);
     }, 300);
-
-  } else {
+  },
+  blink(el) {
     // スローまばたき（レア）：猫の愛情表現とされる仕草
     setCatState('awake');
     el.classList.add('cat-slow-blink');
@@ -1848,7 +1885,114 @@ function reactToTap() {
       el.classList.remove('cat-slow-blink');
       scheduleCatIdle();
     }, 10000);
+  },
+  heart(el) {
+    // ハート（レア）：懐いている合図
+    setCatState('awake');
+    spawnCatHeart(el);
+    catActionTimer = setTimeout(scheduleCatIdle, 1800);
   }
+};
+
+// タップ（3回に1回）への反応：無視55% / どこかへ行く30% / スローまばたき10% / ハート5%
+function reactToTap() {
+  const el = document.getElementById('cat-widget');
+  if (!state.settings.catEnabled || !el) return;
+  clearTimeout(catIdleTimer);
+  clearTimeout(catActionTimer);
+  gainCatAffection(1);
+
+  const roll = Math.random();
+  const key = roll < 0.55 ? 'ignore' : roll < 0.85 ? 'away' : roll < 0.95 ? 'blink' : 'heart';
+  CAT_TAP_REACTIONS[key](el);
+}
+
+// ── 猫の懐き度 ────────────────────────────────────────────
+const CAT_AFFECTION_DAILY_CAP = 10;
+const CAT_AFFECTION_PER_LEVEL = 20;
+
+function gainCatAffection(amount) {
+  const today = new Date().toDateString();
+  if (state.catAffection.todayDate !== today) {
+    state.catAffection.todayDate = today;
+    state.catAffection.todayCount = 0;
+  }
+  const grant = Math.min(amount, CAT_AFFECTION_DAILY_CAP - state.catAffection.todayCount);
+  if (grant <= 0) return;
+  state.catAffection.total += grant;
+  state.catAffection.todayCount += grant;
+  Storage.saveCatAffection(state.catAffection);
+  renderCatAffectionUI();
+}
+
+function renderCatAffectionUI() {
+  const levelEl = document.getElementById('cat-affection-level');
+  if (!levelEl) return;
+  const level = Math.floor(state.catAffection.total / CAT_AFFECTION_PER_LEVEL) + 1;
+  const intoLevel = state.catAffection.total % CAT_AFFECTION_PER_LEVEL;
+  levelEl.textContent = `Lv.${level}`;
+  document.getElementById('cat-affection-fill').style.width = (intoLevel / CAT_AFFECTION_PER_LEVEL * 100) + '%';
+  document.getElementById('cat-affection-count').textContent = `${intoLevel} / ${CAT_AFFECTION_PER_LEVEL}pt`;
+}
+
+// ハートが猫の上にふわっと浮かんで消える演出（ヘッダーのoverflow:hiddenで見切れないよう画面基準の固定配置にする）
+function spawnCatHeart(catEl) {
+  const rect = catEl.getBoundingClientRect();
+  const heart = document.createElement('div');
+  heart.className = 'cat-heart-pop';
+  heart.style.left = (rect.left + rect.width / 2 - 10) + 'px';
+  heart.style.top = (rect.top - 6) + 'px';
+  heart.innerHTML = '<svg viewBox="0 0 24 24" fill="#ff5c8a"><path d="M12 21s-6.7-4.3-9.5-8.4C.7 9.4 1.7 5.7 5 4.4c2-.8 4.2-.1 5.5 1.6C11.8 4.3 14 3.6 16 4.4c3.3 1.3 4.3 5 2.5 8.2C18.7 16.7 12 21 12 21z"/></svg>';
+  document.body.appendChild(heart);
+  setTimeout(() => heart.remove(), 1500);
+}
+
+// タップした瞬間に毎回出す波紋（猫が反応するかどうかに関係なく、タップが効いたことを伝える）
+function spawnCatTapRipple(catEl) {
+  const rect = catEl.getBoundingClientRect();
+  const ripple = document.createElement('div');
+  ripple.className = 'cat-tap-ripple';
+  ripple.style.left = (rect.left + rect.width / 2) + 'px';
+  ripple.style.top = (rect.top + rect.height / 2) + 'px';
+  document.body.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 500);
+}
+
+// ── 管理者モード：相棒の反応テスト表示（懐き度には影響させない） ──
+// key は CAT_TAP_REACTIONS または CAT_IDLE_ACTIONS のいずれかに対応させる
+const COMPANION_TEST_ACTIONS = [
+  { key: 'ignore',     label: '無視' },
+  { key: 'away',       label: 'どこかへ行く' },
+  { key: 'blink',      label: 'スローまばたき' },
+  { key: 'heart',      label: 'ハート' },
+  { key: 'yawn',       label: 'あくび' },
+  { key: 'grooming',   label: '毛づくろい' },
+  { key: 'stretching', label: '伸び' }
+];
+
+function renderCompanionTestRow() {
+  const row = document.getElementById('companion-test-row');
+  if (!row) return;
+  row.style.display = state.isAdmin ? 'block' : 'none';
+  if (!state.isAdmin || row.dataset.rendered) return;
+
+  const container = document.getElementById('companion-test-buttons');
+  container.innerHTML = COMPANION_TEST_ACTIONS.map(a =>
+    `<button class="companion-test-btn" data-test-key="${a.key}">${a.label}</button>`
+  ).join('');
+  container.querySelectorAll('.companion-test-btn').forEach(btn => {
+    btn.addEventListener('click', () => testCompanionAction(btn.dataset.testKey));
+  });
+  row.dataset.rendered = '1';
+}
+
+function testCompanionAction(key) {
+  const el = document.getElementById('cat-widget');
+  if (!state.isAdmin || !state.settings.catEnabled || !el) return;
+  clearTimeout(catIdleTimer);
+  clearTimeout(catActionTimer);
+  if (CAT_TAP_REACTIONS[key]) CAT_TAP_REACTIONS[key](el);
+  else if (CAT_IDLE_ACTIONS[key]) triggerCatIdleAction(key);
 }
 
 // 設定の「猫の表示」トグルに応じて表示/非表示を切り替える
@@ -1873,7 +2017,8 @@ function initCatWidget() {
   // 目を開けている（起きている/あくび中）ときは連打防止のためタップを無視する
   // 眠っている時も3回タップに1回だけ起こす（毎回起こすと猫がかわいそうなため）
   el.addEventListener('click', () => {
-    if (catState !== 'sleeping') return;
+    if (catState !== 'sleeping' || Date.now() < catInputLockedUntil) return; // 反応中・クールダウン中のタップは受け付けないため、波紋も出さない
+    spawnCatTapRipple(el); // タップが受け付けられたことが毎回わかるよう波紋を出す
     catTapCount++;
     if (catTapCount < 3) return;
     catTapCount = 0;

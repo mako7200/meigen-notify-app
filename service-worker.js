@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meigen-notify-v39';
+const CACHE_NAME = 'meigen-notify-v40';
 const CACHE_FILES = [
   './',
   './index.html',
@@ -14,6 +14,8 @@ const CACHE_FILES = [
   './images/animals/cat_sleeping_dot_transparent.png',
   './images/animals/cat_awake_dot_transparent.png',
   './images/animals/cat_yawn_dot_transparent.png',
+  './images/animals/cat_grooming_dot_transparent.png',
+  './images/animals/cat_stretching_dot_transparent.png',
   './images/flowers/CherryBlossomPetals_2_transparent.png',
   './images/flowers/petal_1_transparent.png',
   './images/flowers/petal_2_transparent.png',
