@@ -228,6 +228,30 @@ const THEMES = {
     stops: '#050505 0%, #6B2400 30%, #3A2E22 45%, #1A0F08 65%, #050505 100%',
     bgSize: '500% 500%',
     speed: '36s'
+  },
+  newyear: {
+    label: 'お正月',
+    seasonal: { start: [12, 28], end: [1, 7] },
+    icon: null,
+    stops: '#1a0505, #4a0f0f, #6b1010, #8B0000, #C8943B',
+    bgSize: '400% 400%',
+    speed: '14s'
+  },
+  sakura: {
+    label: '桜',
+    seasonal: { start: [3, 20], end: [4, 10] },
+    icon: 'images/flowers/CherryBlossomPetals_2_transparent.png',
+    stops: '#2a1520, #4a2535, #6b3a50, #E8A0BC, #FFE0EC',
+    bgSize: '400% 400%',
+    speed: '14s'
+  },
+  halloween: {
+    label: 'ハロウィン',
+    seasonal: { start: [10, 25], end: [10, 31] },
+    icon: null,
+    stops: '#0a0510, #2a1030, #4a1a50, #FF8C00, #1a0520',
+    bgSize: '400% 400%',
+    speed: '14s'
   }
 };
 
@@ -238,13 +262,111 @@ function applyTheme(key) {
   root.setProperty('--theme-bg-size', theme.bgSize);
   root.setProperty('--theme-speed', theme.speed);
   document.documentElement.dataset.theme = key;
+
+  if (key === 'sakura') startSakuraPetals();
+  else stopSakuraPetals();
+}
+
+// ── 桜テーマ：花びらが舞う演出 ────────────────────────────
+let petalIntervalFront = null;
+let petalIntervalBack = null;
+
+const PETAL_IMAGE_URLS = [
+  'images/flowers/petal_1_transparent.png',
+  'images/flowers/petal_2_transparent.png',
+  'images/flowers/petal_3_transparent.png',
+  'images/flowers/petal_4_transparent.png',
+  'images/flowers/petal_5_transparent.png',
+  'images/flowers/petal_6_transparent.png',
+  'images/flowers/petal_7_transparent.png'
+];
+
+function spawnPetal(layer, opts) {
+  const petal = document.createElement('div');
+  petal.className = 'petal';
+  const imageUrl = PETAL_IMAGE_URLS[Math.floor(Math.random() * PETAL_IMAGE_URLS.length)];
+  petal.style.backgroundImage = `url('${imageUrl}')`;
+  const size = opts.minSize + Math.random() * (opts.maxSize - opts.minSize);
+  petal.style.width = size + 'px';
+  petal.style.left = Math.random() * 100 + '%';
+  const glow = opts.glow || '0 0 4px rgba(255, 170, 210, 0.9)';
+  petal.style.filter = (opts.blur ? `blur(${opts.blur}px) ` : '') + `drop-shadow(${glow})`;
+  if (opts.opacity) petal.style.opacity = opts.opacity;
+
+  // 見た目にさらにバリエーションが出るよう、初期角度と左右反転もランダムにする
+  petal.style.setProperty('--base-rotate', (Math.random() * 360) + 'deg');
+  petal.style.setProperty('--flip', Math.random() < 0.5 ? 1 : -1);
+
+  const duration = opts.minDuration + Math.random() * (opts.maxDuration - opts.minDuration);
+  const fallHeight = layer.clientHeight || window.innerHeight;
+  const rotateDir = Math.random() < 0.5 ? 1 : -1;
+  petal.style.setProperty('--mid-x1', ((Math.random() * 2 - 1) * opts.sway) + 'px');
+  petal.style.setProperty('--mid-x2', ((Math.random() * 2 - 1) * opts.sway) + 'px');
+  petal.style.setProperty('--fall-mid', (fallHeight * 0.35) + 'px');
+  petal.style.setProperty('--fall-mid2', (fallHeight * 0.7) + 'px');
+  petal.style.setProperty('--fall-end', (fallHeight + 30) + 'px');
+  petal.style.setProperty('--rotate-dir', rotateDir);
+  petal.style.animationDuration = duration + 's';
+
+  layer.appendChild(petal);
+  setTimeout(() => petal.remove(), duration * 1000 + 100);
+}
+
+function startSakuraPetals() {
+  stopSakuraPetals();
+  const layer = document.getElementById('petal-layer');
+  if (!layer) return;
+  petalIntervalBack = setInterval(() => spawnPetal(layer, {
+    minSize: 14, maxSize: 20, minDuration: 32, maxDuration: 44, sway: 35, blur: 1.5, opacity: 0.5,
+    glow: '0 0 3px rgba(255, 170, 210, 0.7)'
+  }), 700);
+  petalIntervalFront = setInterval(() => spawnPetal(layer, {
+    minSize: 22, maxSize: 30, minDuration: 20, maxDuration: 28, sway: 60,
+    glow: '0 0 6px rgba(255, 170, 210, 0.9)'
+  }), 700);
+}
+
+function stopSakuraPetals() {
+  clearInterval(petalIntervalBack);
+  clearInterval(petalIntervalFront);
+  petalIntervalBack = null;
+  petalIntervalFront = null;
+  const layer = document.getElementById('petal-layer');
+  if (layer) layer.innerHTML = '';
 }
 
 function isThemeUnlocked(key) {
   if (state.isAdmin) return true;
   const theme = THEMES[key];
+  if (theme.seasonal) return state.seasonalUnlocked.includes(key);
   if (!theme.unlockId) return true;
   return state.unlocked.some(u => u.id === theme.unlockId);
+}
+
+// ── 季節限定テーマ：期間中にアプリを開くと解放（以後もずっと使える） ──
+function isDateInSeasonalRange(seasonal, date) {
+  const value = (date.getMonth() + 1) * 100 + date.getDate();
+  const start = seasonal.start[0] * 100 + seasonal.start[1];
+  const end = seasonal.end[0] * 100 + seasonal.end[1];
+  if (start <= end) return value >= start && value <= end;
+  return value >= start || value <= end; // 年をまたぐ期間（例：12/28〜1/7）
+}
+
+function checkSeasonalThemeUnlocks() {
+  const today = new Date();
+  let newlyUnlockedLabel = null;
+  Object.keys(THEMES).forEach(key => {
+    const theme = THEMES[key];
+    if (!theme.seasonal || state.seasonalUnlocked.includes(key)) return;
+    if (isDateInSeasonalRange(theme.seasonal, today)) {
+      state.seasonalUnlocked.push(key);
+      newlyUnlockedLabel = theme.label;
+    }
+  });
+  if (newlyUnlockedLabel) {
+    Storage.saveSeasonalUnlocked(state.seasonalUnlocked);
+    showToast(`季節限定テーマ「${newlyUnlockedLabel}」を解放しました`);
+  }
 }
 
 function renderThemeSwatches() {
@@ -336,7 +458,10 @@ const Storage = {
   saveStreak(streak) { localStorage.setItem('meigen_streak', JSON.stringify(streak)); },
   // ログインボーナス { date, quoteId }
   getBonusRecord() { const s = localStorage.getItem('meigen_bonus'); return s ? JSON.parse(s) : null; },
-  saveBonusRecord(r) { localStorage.setItem('meigen_bonus', JSON.stringify(r)); }
+  saveBonusRecord(r) { localStorage.setItem('meigen_bonus', JSON.stringify(r)); },
+  // 解放済み季節限定テーマ一覧 [key, ...]
+  getSeasonalUnlocked() { const s = localStorage.getItem('meigen_seasonal_unlocked'); return s ? JSON.parse(s) : []; },
+  saveSeasonalUnlocked(list) { localStorage.setItem('meigen_seasonal_unlocked', JSON.stringify(list)); }
 };
 
 // ── アプリ状態 ────────────────────────────────────────────
@@ -359,7 +484,8 @@ let state = {
   unlocked: [],   // [{ id, date }, ...]
   diary: {},      // { [quoteId]: "text" }
   isAdmin: false, // セッション中のみ有効（再読み込みでリセット）
-  streak: 0
+  streak: 0,
+  seasonalUnlocked: [] // 解放済み季節限定テーマのキー一覧
 };
 
 let typewriterTimer = null;
@@ -372,8 +498,10 @@ function init() {
   state.favorites = Storage.getFavorites();
   state.unlocked  = Storage.getUnlocked();
   state.diary     = Storage.getDiary();
+  state.seasonalUnlocked = Storage.getSeasonalUnlocked();
   updateStreak();
   state.currentQuote = getDailyQuote();
+  checkSeasonalThemeUnlocks();
 
   applyTheme(state.settings.theme);
   renderHome();
