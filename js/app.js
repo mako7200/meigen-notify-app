@@ -1033,30 +1033,43 @@ function renderList() {
   document.getElementById('quote-list').innerHTML = html;
 }
 
+// ── 管理者モード ロック/解除ボタン（管理タブ・設定タブ共通） ──
+const ADMIN_LOCK_OPEN_PATH = 'M8 11V7a4 4 0 018 0v4';
+const ADMIN_LOCK_CLOSED_PATH = 'M8 11V7a4 4 0 017.75-1.5';
+
+function updateAdminLockUI() {
+  const label = state.isAdmin ? 'ロックする' : '管理者モードにする';
+  const path = state.isAdmin ? ADMIN_LOCK_CLOSED_PATH : ADMIN_LOCK_OPEN_PATH;
+
+  document.getElementById('admin-lock-path').setAttribute('d', path);
+  document.getElementById('admin-lock-btn').setAttribute('aria-label', label);
+  document.getElementById('admin-status').style.display = state.isAdmin ? 'inline' : 'none';
+
+  document.getElementById('admin-lock-path-settings').setAttribute('d', path);
+  document.getElementById('admin-lock-btn-settings').setAttribute('aria-label', label);
+  document.getElementById('admin-settings-sublabel').textContent = state.isAdmin
+    ? '管理者モード中です'
+    : 'PINコードを入力して管理者モードにします';
+}
+
+function toggleAdminLock() {
+  if (state.isAdmin) {
+    state.isAdmin = false;
+    updateAdminLockUI();
+    renderManage();
+    showToast('管理者モードを終了しました');
+  } else {
+    openAdminPinModal();
+  }
+}
+
 // ── 管理タブ描画 ──────────────────────────────────────────
 function renderManage() {
   const addBtn = document.getElementById('add-quote-btn');
-  const adminBar = document.getElementById('admin-bar');
 
   addBtn.style.display = state.isAdmin ? 'flex' : 'none';
   document.getElementById('admin-next-quote-btn').style.display = state.isAdmin ? 'block' : 'none';
-  adminBar.innerHTML = state.isAdmin
-    ? `<div class="admin-status">管理者モード中</div>
-       <button class="admin-lock-btn" id="admin-lock-btn" aria-label="ロックする">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 017.75-1.5"/></svg>
-       </button>`
-    : `<button class="admin-lock-btn" id="admin-lock-btn" aria-label="管理者モードにする">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-       </button>`;
-  document.getElementById('admin-lock-btn').addEventListener('click', () => {
-    if (state.isAdmin) {
-      state.isAdmin = false;
-      renderManage();
-      showToast('管理者モードを終了しました');
-    } else {
-      openAdminPinModal();
-    }
-  });
+  updateAdminLockUI();
 
   const unlockedIds = state.unlocked.map(u => u.id);
   let quotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
@@ -1119,6 +1132,7 @@ function submitAdminPin() {
   if (value === ADMIN_PIN) {
     state.isAdmin = true;
     closeAdminPinModal();
+    updateAdminLockUI();
     renderManage();
     showToast('管理者モードにしました');
   } else {
@@ -1133,6 +1147,7 @@ function renderSettings() {
   document.getElementById('notif-time').value = s.notificationTime;
   document.getElementById('cat-toggle').checked = s.catEnabled;
   renderThemeSwatches();
+  updateAdminLockUI();
 }
 
 // ── イベントバインド ──────────────────────────────────────
@@ -1153,6 +1168,10 @@ function bindEvents() {
     state.manageSearch = e.target.value;
     renderManage();
   });
+
+  // 管理者モード ロック/解除ボタン（管理タブ・設定タブ共通）
+  document.getElementById('admin-lock-btn').addEventListener('click', toggleAdminLock);
+  document.getElementById('admin-lock-btn-settings').addEventListener('click', toggleAdminLock);
 
   // 一覧・管理：並び替え（自作ドロップダウン）
   initSortDropdown('list-sort-dropdown', value => {

@@ -940,16 +940,21 @@ main {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: none;
-  border: none;
-  padding: 4px;
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .sort-direction-btn svg {
   width: 18px;
   height: 18px;
+  stroke-width: 2;
 }
 
 .sort-direction-btn.asc { color: #E05C5C; }
@@ -1277,32 +1282,41 @@ main {
 
 .add-btn:active { background: var(--primary-dark); }
 
-.admin-bar {
+.admin-lock-group {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 8px;
+  flex-shrink: 0;
+  align-self: stretch;
 }
 
 .admin-status {
   font-size: 0.82rem;
   font-weight: bold;
   color: var(--primary-light);
+  white-space: nowrap;
 }
 
 .admin-lock-btn {
-  width: 40px;
-  height: 40px;
+  width: 46px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius);
-  color: rgba(255,248,230,0.85);
+  color: rgba(255, 248, 230, 0.85);
   cursor: pointer;
+}
+
+.search-row .admin-lock-btn {
+  align-self: stretch;
+}
+
+.settings-row .admin-lock-btn {
+  align-self: center;
+  height: 40px;
 }
 
 .admin-lock-btn svg {
