@@ -248,7 +248,7 @@ const THEMES = {
   halloween: {
     label: 'ハロウィン',
     seasonal: { start: [10, 25], end: [10, 31] },
-    icon: null,
+    icon: 'images/Halloween/pumpkin_1_transparent.png',
     stops: '#0a0510, #2a1030, #4a1a50, #FF8C00, #1a0520',
     bgSize: '400% 400%',
     speed: '14s'
@@ -265,6 +265,9 @@ function applyTheme(key) {
 
   if (key === 'sakura') startSakuraPetals();
   else stopSakuraPetals();
+
+  if (key === 'halloween') startHalloweenEffects();
+  else stopHalloweenEffects();
 }
 
 // ── 桜テーマ：花びらが舞う演出 ────────────────────────────
@@ -332,6 +335,71 @@ function stopSakuraPetals() {
   petalIntervalBack = null;
   petalIntervalFront = null;
   const layer = document.getElementById('petal-layer');
+  if (layer) layer.innerHTML = '';
+}
+
+// ── ハロウィンテーマ：コウモリが横切り、お化けが浮かび上がる演出 ──
+let batInterval = null;
+let ghostInterval = null;
+
+function spawnBat(layer) {
+  const bat = document.createElement('div');
+  bat.className = 'bat';
+  bat.style.backgroundImage = "url('images/Halloween/bat_1_transparent.png')";
+  const size = 70 + Math.random() * 30;
+  bat.style.width = size + 'px';
+  bat.style.top = (10 + Math.random() * 60) + '%';
+  bat.style.opacity = 0.55;
+
+  const layerWidth = layer.clientWidth || window.innerWidth;
+  const leftToRight = Math.random() < 0.5;
+  const startX = leftToRight ? -80 : layerWidth + 80;
+  const endX = leftToRight ? layerWidth + 80 : -80;
+  bat.style.setProperty('--start-x', startX + 'px');
+  bat.style.setProperty('--end-x', endX + 'px');
+  bat.style.setProperty('--flip', leftToRight ? 1 : -1);
+  bat.style.setProperty('--bob', ((Math.random() < 0.5 ? -1 : 1) * (15 + Math.random() * 15)) + 'px');
+
+  const duration = 6 + Math.random() * 4;
+  bat.style.animationDuration = duration + 's';
+
+  layer.appendChild(bat);
+  setTimeout(() => bat.remove(), duration * 1000 + 100);
+}
+
+function spawnGhost(layer) {
+  const ghost = document.createElement('div');
+  ghost.className = 'ghost';
+  ghost.style.backgroundImage = "url('images/Halloween/ghost_1_transparent.png')";
+  const size = 32 + Math.random() * 18;
+  ghost.style.width = size + 'px';
+  ghost.style.left = (10 + Math.random() * 80) + '%';
+
+  const layerHeight = layer.clientHeight || window.innerHeight;
+  ghost.style.setProperty('--float-height', (layerHeight * 0.6 + Math.random() * layerHeight * 0.3) + 'px');
+  ghost.style.setProperty('--sway', (((Math.random() * 2) - 1) * 20) + 'px');
+
+  const duration = 8 + Math.random() * 4;
+  ghost.style.animationDuration = duration + 's';
+
+  layer.appendChild(ghost);
+  setTimeout(() => ghost.remove(), duration * 1000 + 100);
+}
+
+function startHalloweenEffects() {
+  stopHalloweenEffects();
+  const layer = document.getElementById('halloween-layer');
+  if (!layer) return;
+  batInterval = setInterval(() => spawnBat(layer), 24000 + Math.random() * 10000);
+  ghostInterval = setInterval(() => spawnGhost(layer), 24000 + Math.random() * 10000);
+}
+
+function stopHalloweenEffects() {
+  clearInterval(batInterval);
+  clearInterval(ghostInterval);
+  batInterval = null;
+  ghostInterval = null;
+  const layer = document.getElementById('halloween-layer');
   if (layer) layer.innerHTML = '';
 }
 

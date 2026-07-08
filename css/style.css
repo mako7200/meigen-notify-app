@@ -1723,6 +1723,56 @@ html[data-theme="sakura"] .petal-layer {
   100% { transform: translate(0, var(--fall-end, 460px)) rotate(calc(360deg * var(--rotate-dir, 1) + var(--base-rotate, 0deg))) scaleX(var(--flip, 1)); }
 }
 
+/* ハロウィンテーマ：コウモリが横切り、お化けが浮かび上がる演出 */
+.halloween-layer {
+  display: none;
+  position: fixed;
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+html[data-theme="halloween"] .halloween-layer {
+  display: block;
+}
+
+.bat {
+  position: absolute;
+  top: 0;
+  aspect-ratio: 1;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  animation: batFly linear forwards;
+}
+
+@keyframes batFly {
+  0%   { transform: translate(var(--start-x, -80px), 0) scaleX(var(--flip, 1)); }
+  50%  { transform: translate(calc((var(--start-x, -80px) + var(--end-x, 80px)) / 2), var(--bob, -15px)) scaleX(var(--flip, 1)); }
+  100% { transform: translate(var(--end-x, 80px), 0) scaleX(var(--flip, 1)); }
+}
+
+.ghost {
+  position: absolute;
+  bottom: -60px;
+  aspect-ratio: 1;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+  animation: ghostFloat ease-in-out forwards;
+}
+
+@keyframes ghostFloat {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  15%  { opacity: 0.85; }
+  50%  { transform: translate(var(--sway, 0px), calc(var(--float-height, 300px) * -0.5)); opacity: 0.85; }
+  85%  { opacity: 0.3; }
+  100% { transform: translate(0, calc(var(--float-height, 300px) * -1)); opacity: 0; }
+}
+
 .nav-btn {
   flex: 1;
   display: flex;
