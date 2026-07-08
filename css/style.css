@@ -101,6 +101,7 @@ header {
   flex-shrink: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
+  overflow: hidden;
   z-index: 10;
 }
 
@@ -671,6 +672,7 @@ main {
   border-radius: 12px;
   padding: 12px 14px;
   margin-bottom: 14px;
+  cursor: pointer;
 }
 
 .streak-row {
@@ -678,6 +680,12 @@ main {
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 8px;
+}
+
+.streak-main-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .streak-dots {
@@ -1070,16 +1078,17 @@ main {
 }
 
 .cat-widget {
-  position: fixed;
-  left: 26px;
-  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
-  width: 56px;
-  height: 56px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   image-rendering: pixelated;
   cursor: pointer;
-  z-index: 45;
-  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  transition: transform 0.6s ease, opacity 0.6s ease;
 }
 
 .cat-widget.hidden {
@@ -1093,6 +1102,21 @@ main {
 @keyframes catEyeFade {
   from { opacity: 0.35; }
   to   { opacity: 1; }
+}
+
+.cat-widget.away {
+  transform: translateY(-50%) translateX(70px);
+  opacity: 0;
+}
+
+.cat-widget.cat-slow-blink {
+  animation: catSlowBlinkGlow 1.8s ease-in-out;
+}
+
+@keyframes catSlowBlinkGlow {
+  0%   { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+  50%  { filter: drop-shadow(0 2px 10px rgba(240,200,120,0.6)); }
+  100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
 }
 
 .scroll-top-btn.show {
@@ -2121,6 +2145,183 @@ html[data-theme="aizen"] header {
 .rarity-row-fill {
   height: 100%;
   border-radius: 5px;
+}
+
+.login-modal-box {
+  width: 340px;
+  max-width: 90vw;
+  padding-top: 40px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.login-modal-box .modal-title {
+  color: rgba(255, 248, 230, 0.95);
+}
+
+.login-modal-current {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+
+.login-modal-day {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: rgba(255, 248, 230, 0.95);
+}
+
+.login-modal-sub {
+  font-size: 0.72rem;
+  color: rgba(255, 248, 230, 0.55);
+}
+
+.login-day-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.login-day-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  opacity: 0.5;
+}
+
+.login-day-cell.done {
+  opacity: 0.85;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.login-day-cell.done::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  font-weight: bold;
+  color: #FF8A3D;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.login-day-num {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: rgba(255, 248, 230, 0.85);
+}
+
+.login-day-reward {
+  display: block;
+  min-height: 1em;
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+  color: rgba(255, 248, 230, 0.6);
+}
+
+.login-day-cell.milestone { opacity: 0.7; }
+
+.login-day-cell.milestone-3 {
+  border-color: rgba(199, 204, 214, 0.55);
+  box-shadow: 0 0 8px rgba(199, 204, 214, 0.5);
+}
+.login-day-cell.milestone-3.done, .login-day-cell.milestone-3.current {
+  background: rgba(199, 204, 214, 0.18);
+  border-color: #C7CCD6;
+}
+.login-day-cell.milestone-3 .login-day-reward { color: #C7CCD6; }
+
+.login-day-cell.milestone-7 {
+  border-color: rgba(217, 164, 65, 0.55);
+  box-shadow: 0 0 8px rgba(217, 164, 65, 0.5);
+}
+.login-day-cell.milestone-7.done, .login-day-cell.milestone-7.current {
+  background: rgba(217, 164, 65, 0.18);
+  border-color: #D9A441;
+}
+.login-day-cell.milestone-7 .login-day-reward { color: #FFE9A8; }
+
+.login-day-cell.milestone-10 {
+  border-color: rgba(0, 200, 83, 0.55);
+  box-shadow: 0 0 8px rgba(0, 200, 83, 0.5);
+}
+.login-day-cell.milestone-10.done, .login-day-cell.milestone-10.current {
+  background: rgba(0, 200, 83, 0.18);
+  border-color: #00C853;
+}
+.login-day-cell.milestone-10 .login-day-reward { color: #6BFFA8; }
+
+.login-day-cell.current {
+  opacity: 1;
+  --pulse-color: rgba(255, 248, 230, 0.6);
+  --pulse-color-ring: rgba(255, 248, 230, 0.25);
+  animation: milestonePulse 1.8s ease-in-out infinite;
+}
+
+.login-day-cell.milestone-3.current  { --pulse-color: rgba(199, 204, 214, 0.85); --pulse-color-ring: rgba(199, 204, 214, 0.3); }
+.login-day-cell.milestone-7.current  { --pulse-color: rgba(217, 164, 65, 0.85);  --pulse-color-ring: rgba(217, 164, 65, 0.3); }
+.login-day-cell.milestone-10.current { --pulse-color: rgba(0, 200, 83, 0.85);    --pulse-color-ring: rgba(0, 200, 83, 0.3); }
+
+.login-modal-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-modal-cat-row.hidden {
+  display: none;
+}
+
+.login-modal-cat {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.login-modal-speech {
+  position: relative;
+  background: rgba(255, 255, 255, 0.9);
+  color: #3a2a1a;
+  font-size: 0.72rem;
+  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 12px;
+  line-height: 1.4;
+}
+
+.login-modal-speech::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 6px 6px 0;
+  border-style: solid;
+  border-color: transparent rgba(255, 255, 255, 0.9) transparent transparent;
 }
 
 .detail-badge-row {

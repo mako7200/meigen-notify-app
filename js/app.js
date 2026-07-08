@@ -529,11 +529,78 @@ function renderStreakIndicator() {
 
   el.innerHTML = `
     <div class="streak-row">
-      <span class="streak-main">ログイン ${state.streak}日目</span>
+      <span class="streak-main-group">
+        <span class="streak-main">ログイン ${state.streak}日目</span>
+        <svg class="progress-label-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      </span>
       ${sub ? `<span class="streak-sub">${sub}</span>` : ''}
     </div>
     <div class="streak-dots">${dots.join('')}</div>
   `;
+}
+
+// ── 連続ログインボーナス説明モーダル ──────────────────────
+const LOGIN_MILESTONE_INFO = {
+  3:  { reward: 'R↑',  cls: 'milestone-3' },
+  7:  { reward: 'SR↑', cls: 'milestone-7' },
+  10: { reward: 'UR',  cls: 'milestone-10' }
+};
+let loginModalCatTimer = null;
+
+function openLoginModal() {
+  if (state.streak <= 0) return;
+  const pos = getCyclePosition(state.streak);
+  const claimedToday = isBonusDay() && !!getTodaysBonusRecord();
+
+  const statusText = isBonusDay()
+    ? (claimedToday ? '本日のボーナスは受取済みです' : '本日はボーナス対象日です')
+    : `次のボーナスまであと${daysUntilNextBonus(state.streak)}日`;
+
+  document.getElementById('login-modal-current').innerHTML = `
+    <span class="login-modal-day">ログイン ${state.streak}日目</span>
+    <span class="login-modal-sub">${statusText}</span>
+  `;
+
+  const cells = [];
+  for (let day = 1; day <= BONUS_CYCLE; day++) {
+    const info = LOGIN_MILESTONE_INFO[day];
+    const isCurrent = day === pos;
+    let cls = 'login-day-cell' + (info ? ` milestone ${info.cls}` : '');
+    if (day < pos || (isCurrent && (!info || claimedToday))) cls += ' done';
+    else if (isCurrent) cls += ' current';
+    cells.push(`
+      <div class="${cls}">
+        <span class="login-day-num">${day}</span>
+        <span class="login-day-reward">${info ? info.reward : ''}</span>
+      </div>
+    `);
+  }
+
+  document.getElementById('login-modal-rows').innerHTML = `
+    <div class="login-day-grid">${cells.join('')}</div>
+  `;
+
+  document.getElementById('login-modal-cat-row').classList.toggle('hidden', !state.settings.catEnabled);
+
+  // 起きて挨拶した後、3秒経ったら眠りにつく
+  const catImg = document.getElementById('login-modal-cat-img');
+  const catSpeech = document.getElementById('login-modal-cat-speech');
+  catImg.src = CAT_IMG.awake;
+  catSpeech.textContent = '明日もログインするニャ';
+  clearTimeout(loginModalCatTimer);
+  loginModalCatTimer = setTimeout(() => {
+    catImg.src = CAT_IMG.sleeping;
+    catSpeech.textContent = 'zzz';
+  }, 3000);
+
+  document.getElementById('login-modal-overlay').classList.add('open');
+  lockBodyScroll();
+}
+
+function closeLoginModal() {
+  clearTimeout(loginModalCatTimer);
+  document.getElementById('login-modal-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 
 function renderBonusArea() {
@@ -902,6 +969,13 @@ function bindEvents() {
   document.getElementById('rarity-modal-close').addEventListener('click', closeRarityModal);
   document.getElementById('rarity-modal-overlay').addEventListener('click', e => {
     if (e.target.id === 'rarity-modal-overlay') closeRarityModal();
+  });
+
+  // 連続ログインボーナス説明モーダル
+  document.getElementById('streak-indicator').addEventListener('click', openLoginModal);
+  document.getElementById('login-modal-close').addEventListener('click', closeLoginModal);
+  document.getElementById('login-modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'login-modal-overlay') closeLoginModal();
   });
 
   // 管理：追加ボタン
@@ -1416,10 +1490,12 @@ const CAT_IMG = {
 };
 let catIdleTimer = null;
 let catActionTimer = null;
+let catState = 'sleeping';
 
 function setCatState(nextState) {
   const el = document.getElementById('cat-widget');
   if (!el) return;
+  catState = nextState;
   el.src = CAT_IMG[nextState];
   el.classList.remove('cat-awake', 'cat-yawn');
   if (nextState !== 'sleeping') {
@@ -1428,7 +1504,7 @@ function setCatState(nextState) {
   }
 }
 
-// 気まぐれに寝たり起きたりを繰り返す（大半は眠り、あくびは稀）
+// 気まぐれに眠り続け、稀にあくびだけする（「起きる」は自動では発生させない）
 function scheduleCatIdle() {
   if (!state.settings.catEnabled) return;
   clearTimeout(catIdleTimer);
@@ -1436,25 +1512,63 @@ function scheduleCatIdle() {
   setCatState('sleeping');
   const sleepTime = 8000 + Math.random() * 8000;
   catIdleTimer = setTimeout(() => {
-    const action = Math.random() < 0.15 ? 'yawn' : 'awake';
-    setCatState(action);
-    const actionTime = action === 'yawn' ? 1200 + Math.random() * 800 : 800 + Math.random() * 700;
-    catActionTimer = setTimeout(scheduleCatIdle, actionTime);
+    if (Math.random() < 0.15) {
+      setCatState('yawn');
+      const actionTime = 1200 + Math.random() * 800;
+      catActionTimer = setTimeout(scheduleCatIdle, actionTime);
+    } else {
+      scheduleCatIdle();
+    }
   }, sleepTime);
 }
 
-// タップ、またはレア以上の名言解放時に強制的に起こす
+// レア以上の名言解放時に確実に起こす（ご褒美イベントなので気まぐれ抽選の対象外）
 function wakeCat() {
   if (!state.settings.catEnabled || !document.getElementById('cat-widget')) return;
   clearTimeout(catIdleTimer);
   clearTimeout(catActionTimer);
   setCatState('awake');
-  catActionTimer = setTimeout(scheduleCatIdle, 1500);
+  catActionTimer = setTimeout(scheduleCatIdle, 10000);
 }
 
 function wakeCatIfRareReveal() {
   if (!dailyQuoteJustRevealed || !state.currentQuote || !state.currentQuote.rarity) return;
   setTimeout(wakeCat, typewriterDuration(state.currentQuote.text));
+}
+
+// タップ（3回に1回）への反応：無視60% / どこかへ行く30% / スローまばたき10%
+function reactToTap() {
+  const el = document.getElementById('cat-widget');
+  if (!state.settings.catEnabled || !el) return;
+  clearTimeout(catIdleTimer);
+  clearTimeout(catActionTimer);
+
+  const roll = Math.random();
+  if (roll < 0.6) {
+    // 無視：ちらっと目を開けてすぐ寝る
+    setCatState('awake');
+    catActionTimer = setTimeout(scheduleCatIdle, 500);
+
+  } else if (roll < 0.9) {
+    // どこかへ行ってしまう
+    setCatState('awake');
+    catActionTimer = setTimeout(() => {
+      el.classList.add('away');
+      catActionTimer = setTimeout(() => {
+        el.classList.remove('away');
+        scheduleCatIdle();
+      }, 2500 + Math.random() * 1500);
+    }, 300);
+
+  } else {
+    // スローまばたき（レア）：猫の愛情表現とされる仕草
+    setCatState('awake');
+    el.classList.add('cat-slow-blink');
+    catActionTimer = setTimeout(() => {
+      el.classList.remove('cat-slow-blink');
+      scheduleCatIdle();
+    }, 10000);
+  }
 }
 
 // 設定の「猫の表示」トグルに応じて表示/非表示を切り替える
@@ -1471,10 +1585,20 @@ function updateCatVisibility() {
   }
 }
 
+let catTapCount = 0;
+
 function initCatWidget() {
   const el = document.getElementById('cat-widget');
   if (!el) return;
-  el.addEventListener('click', wakeCat);
+  // 目を開けている（起きている/あくび中）ときは連打防止のためタップを無視する
+  // 眠っている時も3回タップに1回だけ起こす（毎回起こすと猫がかわいそうなため）
+  el.addEventListener('click', () => {
+    if (catState !== 'sleeping') return;
+    catTapCount++;
+    if (catTapCount < 3) return;
+    catTapCount = 0;
+    reactToTap();
+  });
   updateCatVisibility();
 }
 

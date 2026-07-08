@@ -33,6 +33,7 @@
     <div class="header-title">
       <span id="header-title-text">ホーム</span>
     </div>
+    <img id="cat-widget" class="cat-widget" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
   </header>
 
   <!-- 更新バナー -->
@@ -218,7 +219,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">猫の表示</div>
-            <div class="settings-sublabel">画面左下に常駐する猫を表示します</div>
+            <div class="settings-sublabel">ヘッダー右端に常駐する猫を表示します</div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="cat-toggle">
@@ -235,7 +236,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.16.0</div>
+            <div class="settings-sublabel">Version 2.17.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -252,8 +253,6 @@
   <button class="scroll-top-btn" id="scroll-top-btn" aria-label="ページトップへ戻る">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
   </button>
-
-  <img id="cat-widget" class="cat-widget" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
 
   <!-- ボトムナビゲーション -->
   <div class="nav-aura" id="nav-aura">
@@ -393,6 +392,20 @@
     <button class="diary-close-btn" id="rarity-modal-close">✕</button>
     <div class="rarity-modal-total" id="rarity-modal-total">0 / 0</div>
     <div id="rarity-modal-rows"></div>
+  </div>
+</div>
+
+<!-- 連続ログインボーナス説明モーダル -->
+<div class="modal-overlay centered-modal" id="login-modal-overlay">
+  <div class="modal centered-modal-box login-modal-box">
+    <button class="diary-close-btn" id="login-modal-close">✕</button>
+    <div class="modal-title">連続ログインボーナス</div>
+    <div class="login-modal-current" id="login-modal-current"></div>
+    <div id="login-modal-rows"></div>
+    <div class="login-modal-cat-row" id="login-modal-cat-row">
+      <img class="login-modal-cat" id="login-modal-cat-img" src="images/animals/cat_awake_dot_transparent.png" alt="">
+      <div class="login-modal-speech" id="login-modal-cat-speech">明日もログインするニャ</div>
+    </div>
   </div>
 </div>
 
