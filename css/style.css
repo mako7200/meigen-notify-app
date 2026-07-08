@@ -1773,6 +1773,38 @@ html[data-theme="halloween"] .halloween-layer {
   100% { transform: translate(0, calc(var(--float-height, 300px) * -1)); opacity: 0; }
 }
 
+/* 雪テーマ：雪が降る演出 */
+.snow-layer {
+  display: none;
+  position: fixed;
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+html[data-theme="snow"] .snow-layer {
+  display: block;
+}
+
+.snow-particle {
+  position: absolute;
+  top: -30px;
+  aspect-ratio: 1;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  animation: snowFall linear forwards;
+}
+
+@keyframes snowFall {
+  0%   { transform: translate(0, -20px) rotate(var(--base-rotate, 0deg)); }
+  50%  { transform: translate(var(--mid-x, 0px), var(--fall-mid, 250px)) rotate(calc(90deg * var(--rotate-dir, 1) + var(--base-rotate, 0deg))); }
+  100% { transform: translate(0, var(--fall-end, 460px)) rotate(calc(180deg * var(--rotate-dir, 1) + var(--base-rotate, 0deg))); }
+}
+
 .nav-btn {
   flex: 1;
   display: flex;

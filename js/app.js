@@ -229,11 +229,11 @@ const THEMES = {
     bgSize: '500% 500%',
     speed: '36s'
   },
-  newyear: {
-    label: 'お正月',
-    seasonal: { start: [12, 28], end: [1, 7] },
-    icon: null,
-    stops: '#1a0505, #4a0f0f, #6b1010, #8B0000, #C8943B',
+  snow: {
+    label: '雪',
+    seasonal: { start: [12, 1], end: [2, 28] },
+    icon: 'images/winter/snowflake_1_transparent.png',
+    stops: '#0a1428, #16233f, #2a3f5f, #A8C8E8, #F0F8FF',
     bgSize: '400% 400%',
     speed: '14s'
   },
@@ -268,6 +268,9 @@ function applyTheme(key) {
 
   if (key === 'halloween') startHalloweenEffects();
   else stopHalloweenEffects();
+
+  if (key === 'snow') startSnowEffect();
+  else stopSnowEffect();
 }
 
 // ── 桜テーマ：花びらが舞う演出 ────────────────────────────
@@ -400,6 +403,68 @@ function stopHalloweenEffects() {
   batInterval = null;
   ghostInterval = null;
   const layer = document.getElementById('halloween-layer');
+  if (layer) layer.innerHTML = '';
+}
+
+// ── 雪テーマ：雪が降る演出 ────────────────────────────
+let snowIntervalFront = null;
+let snowIntervalBack = null;
+
+const SNOW_IMAGE_TYPES = [
+  { key: 'snowflake', url: 'images/winter/snowflake_1_transparent.png' },
+  { key: 'snowball', url: 'images/winter/snowball_1_transparent.png' }
+];
+
+function spawnSnow(layer, opts) {
+  const flake = document.createElement('div');
+  flake.className = 'snow-particle';
+  const imageType = SNOW_IMAGE_TYPES[Math.floor(Math.random() * SNOW_IMAGE_TYPES.length)];
+  flake.style.backgroundImage = `url('${imageType.url}')`;
+  const sizeRange = opts.sizeByType[imageType.key];
+  const size = sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min);
+  flake.style.width = size + 'px';
+  flake.style.left = Math.random() * 100 + '%';
+  const glow = opts.glow || '0 0 3px rgba(255, 255, 255, 0.8)';
+  flake.style.filter = (opts.blur ? `blur(${opts.blur}px) ` : '') + `drop-shadow(${glow})`;
+  if (opts.opacity) flake.style.opacity = opts.opacity;
+
+  flake.style.setProperty('--base-rotate', (Math.random() * 360) + 'deg');
+
+  const duration = opts.minDuration + Math.random() * (opts.maxDuration - opts.minDuration);
+  const fallHeight = layer.clientHeight || window.innerHeight;
+  const rotateDir = Math.random() < 0.5 ? 1 : -1;
+  flake.style.setProperty('--mid-x', ((Math.random() * 2 - 1) * opts.sway) + 'px');
+  flake.style.setProperty('--fall-mid', (fallHeight * 0.5) + 'px');
+  flake.style.setProperty('--fall-end', (fallHeight + 30) + 'px');
+  flake.style.setProperty('--rotate-dir', rotateDir);
+  flake.style.animationDuration = duration + 's';
+
+  layer.appendChild(flake);
+  setTimeout(() => flake.remove(), duration * 1000 + 100);
+}
+
+function startSnowEffect() {
+  stopSnowEffect();
+  const layer = document.getElementById('snow-layer');
+  if (!layer) return;
+  snowIntervalBack = setInterval(() => spawnSnow(layer, {
+    sizeByType: { snowflake: { min: 10, max: 16 }, snowball: { min: 5, max: 8 } },
+    minDuration: 32, maxDuration: 44, sway: 20, blur: 1, opacity: 0.5,
+    glow: '0 0 2px rgba(255, 255, 255, 0.6)'
+  }), 700);
+  snowIntervalFront = setInterval(() => spawnSnow(layer, {
+    sizeByType: { snowflake: { min: 16, max: 24 }, snowball: { min: 8, max: 12 } },
+    minDuration: 20, maxDuration: 28, sway: 30,
+    glow: '0 0 4px rgba(255, 255, 255, 0.9)'
+  }), 700);
+}
+
+function stopSnowEffect() {
+  clearInterval(snowIntervalBack);
+  clearInterval(snowIntervalFront);
+  snowIntervalBack = null;
+  snowIntervalFront = null;
+  const layer = document.getElementById('snow-layer');
   if (layer) layer.innerHTML = '';
 }
 
