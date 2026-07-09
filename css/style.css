@@ -164,7 +164,7 @@ main {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
+  padding-bottom: 8px;
   background: transparent;
 }
 
@@ -230,7 +230,6 @@ main {
 #tab-home.active {
   display: flex;
   flex-direction: column;
-  min-height: calc(100% - var(--nav-height) - env(safe-area-inset-bottom, 0px));
 }
 
 #tab-home #home-quote-area {
@@ -1803,12 +1802,9 @@ details[open] > .accordion-summary .accordion-caret {
   font-size: 0.78rem;
 }
 
-/* ボトムナビ */
+/* ボトムナビ（#appの高さに連動させるため、fixedではなく通常のレイアウト要素として最下部に配置） */
 nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: #0a0820;
