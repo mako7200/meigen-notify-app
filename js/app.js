@@ -1,5 +1,13 @@
 'use strict';
 
+// iOSのホーム画面追加（standalone）時、vh/dvhの計算がWKWebViewの実表示範囲と食い違うことがあるため、
+// window.innerHeightを直接測定してCSS変数に反映する
+function updateRealViewportHeight() {
+  document.documentElement.style.setProperty('--real-vh', window.innerHeight + 'px');
+}
+updateRealViewportHeight();
+window.addEventListener('resize', updateRealViewportHeight);
+
 // ── ストレージ管理 ────────────────────────────────────────
 // quotes.jsの組み込みデータに新しいフィールドを追加した際、
 // 既に端末に保存済みの名言データへ後から補うためのバージョン番号
