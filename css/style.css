@@ -84,6 +84,19 @@ html.modal-open {
   max-width: 480px;
   margin: 0 auto;
   position: relative;
+  isolation: isolate;
+}
+
+/* 背景アニメーションはmain（スクロール領域）から切り離し、
+   独立したレイヤーにすることでスクロール中の再描画競合（固定要素のガタつき）を防ぐ */
+#app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(-45deg, var(--theme-stops, #090627, #14063a, #0d1a4a, #1a0a3d));
+  background-size: var(--theme-bg-size, 400% 400%);
+  animation: gradientShift var(--theme-speed, 12s) ease infinite;
 }
 
 /* ヘッダー */
@@ -141,16 +154,13 @@ header .header-title {
   flex-shrink: 0;
 }
 
-/* メインエリア */
+/* メインエリア（背景アニメーションは#app::beforeに分離済み） */
 main {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
-  background-image: linear-gradient(-45deg, var(--theme-stops, #090627, #14063a, #0d1a4a, #1a0a3d));
-  background-size: var(--theme-bg-size, 400% 400%);
-  animation: gradientShift var(--theme-speed, 12s) ease infinite;
+  background: transparent;
 }
 
 @keyframes gradientShift {
@@ -168,6 +178,17 @@ main {
 
 .tab-section.active {
   display: block;
+}
+
+/* 検索・並び替えを固定表示するタブ（一覧・管理）は、
+   タブ自体のパディングをやめて中身側で持つことで、固定要素にマイナスマージンを使わずに済むようにする */
+#tab-list,
+#tab-manage {
+  padding: 0;
+}
+
+.tab-body-pad {
+  padding: 20px 16px;
 }
 
 @keyframes fadeIn {
@@ -889,6 +910,23 @@ main {
 
 
 /* 一覧タブ */
+.sticky-toolbar {
+  display: none;
+  position: fixed;
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 5;
+  background: #14122a;
+  padding: 20px 16px 4px;
+}
+
+.sticky-toolbar.active {
+  display: block;
+}
+
 .search-row {
   display: flex;
   gap: 8px;

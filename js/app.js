@@ -468,12 +468,17 @@ function stopSnowEffect() {
   if (layer) layer.innerHTML = '';
 }
 
-function isThemeUnlocked(key) {
-  if (state.isAdmin) return true;
+// 管理者モードの特別扱いを含まない、本当の解放状況。設定として保存してよいかの判定に使う
+function isThemeGenuinelyUnlocked(key) {
   const theme = THEMES[key];
   if (theme.seasonal) return state.seasonalUnlocked.includes(key);
   if (!theme.unlockId) return true;
   return state.unlocked.some(u => u.id === theme.unlockId);
+}
+
+function isThemeUnlocked(key) {
+  if (state.isAdmin) return true;
+  return isThemeGenuinelyUnlocked(key);
 }
 
 // ── 季節限定テーマ：期間中にアプリを開くと解放（以後もずっと使える） ──
@@ -622,7 +627,12 @@ let state = {
   isAdmin: false, // セッション中のみ有効（再読み込みでリセット）
   streak: 0,
   seasonalUnlocked: [], // 解放済み季節限定テーマのキー一覧
-  catAffection: { total: 0, todayDate: '', todayCount: 0 }
+  catAffection: { total: 0, todayDate: '', todayCount: 0 },
+  // 一覧・管理タブの小分け描画用（スクロールに応じて追加描画する）
+  listRenderItems: [],
+  listRenderedCount: 0,
+  manageRenderItems: [],
+  manageRenderedCount: 0
 };
 
 let typewriterTimer = null;
@@ -640,6 +650,13 @@ function init() {
   updateStreak();
   state.currentQuote = getDailyQuote();
   checkSeasonalThemeUnlocks();
+
+  // 管理者モードで一時的にロック中のテーマを選んだまま保存されてしまった場合に備え、
+  // 起動時は必ず本来の解放状況で検証し、未解放なら初期テーマに戻す
+  if (!isThemeGenuinelyUnlocked(state.settings.theme)) {
+    state.settings.theme = 'default';
+    Storage.saveSettings(state.settings);
+  }
 
   applyTheme(state.settings.theme);
   renderHome();
@@ -991,7 +1008,43 @@ function renderHome() {
 }
 
 // ── 一覧タブ描画 ──────────────────────────────────────────
+const RENDER_BATCH_SIZE = 20;
+const LOCKED_CARD_HTML = '<div class="quote-list-item locked"><div class="locked-content"><svg class="lock-svg"><use href="#icon-lock"></use></svg></div></div>';
+
+function quoteListItemHtml(q) {
+  const isFav = state.favorites.includes(q.id);
+  const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
+  const rank = RANK_META[q.rarity];
+  const cLabel = categoryLabel(q);
+  return `
+    <div class="quote-list-item${isFav ? ' is-favorite' : ''}${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
+      ${rankRingHtml(q.rarity)}
+      ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
+      <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
+      <div class="quote-list-text">${escapeHtml(q.text)}</div>
+      <div class="quote-list-meta">
+        <span class="quote-list-author">${escapeHtml(q.author)}</span>
+        ${cLabel ? `<span class="category-badge">${cLabel}</span>` : ''}
+      </div>
+      ${hasDiary ? '<div class="diary-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> コメントあり</div>' : ''}
+    </div>
+  `;
+}
+
+// 一覧・管理タブ共通：描画済みの続きから次の1バッチだけを追記する
+function appendRenderBatch(items, renderedCount, containerId, htmlFn) {
+  const container = document.getElementById(containerId);
+  const end = Math.min(renderedCount + RENDER_BATCH_SIZE, items.length);
+  let html = '';
+  for (let i = renderedCount; i < end; i++) {
+    html += htmlFn(items[i]);
+  }
+  container.insertAdjacentHTML('beforeend', html);
+  return end;
+}
+
 function renderList() {
+  document.querySelector('main').scrollTop = 0; // 並び替え・絞り込み直後に古いスクロール位置が残らないようにする
   const unlockedIds = state.unlocked.map(u => u.id);
   const search = state.listSearch.trim().toLowerCase();
 
@@ -1014,37 +1067,27 @@ function renderList() {
     document.getElementById('quote-list').innerHTML = state.listFavoriteOnly
       ? '<div class="empty-state"><div class="empty-icon">☆</div><p>お気に入りがまだありません。<br>ホームの星マークで追加してください。</p></div>'
       : '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>';
+    state.listRenderItems = [];
+    state.listRenderedCount = 0;
     return;
   }
 
-  let html = unlockedQuotes.map(q => {
-    const isFav = state.favorites.includes(q.id);
-    const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
-    const rank = RANK_META[q.rarity];
-    const cLabel = categoryLabel(q);
-    return `
-      <div class="quote-list-item${isFav ? ' is-favorite' : ''}${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
-        ${rankRingHtml(q.rarity)}
-        ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
-        <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
-        <div class="quote-list-text">${escapeHtml(q.text)}</div>
-        <div class="quote-list-meta">
-          <span class="quote-list-author">${escapeHtml(q.author)}</span>
-          ${cLabel ? `<span class="category-badge">${cLabel}</span>` : ''}
-        </div>
-        ${hasDiary ? '<div class="diary-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> コメントあり</div>' : ''}
-      </div>
-    `;
-  }).join('');
-
-  // 未解放の名言は鍵アイコン＋？？？（フィルターなしのときのみ表示）
+  // 実際のカードと未解放プレースホルダーを1本の配列にまとめ、まとめて少しずつ描画する
   // アイコンはindex.html側で1つだけ定義したSVGシンボルをuseで参照し、生成コストを抑える
+  const items = unlockedQuotes.map(q => ({ locked: false, quote: q }));
   if (!state.listFavoriteOnly && !search && allCategoriesSelected) {
-    const lockedCard = '<div class="quote-list-item locked"><div class="locked-content"><svg class="lock-svg"><use href="#icon-lock"></use></svg></div></div>';
-    html += lockedCard.repeat(totalLocked);
+    for (let i = 0; i < totalLocked; i++) items.push({ locked: true });
   }
 
-  document.getElementById('quote-list').innerHTML = html;
+  state.listRenderItems = items;
+  document.getElementById('quote-list').innerHTML = '';
+  state.listRenderedCount = appendRenderBatch(items, 0, 'quote-list', item => item.locked ? LOCKED_CARD_HTML : quoteListItemHtml(item.quote));
+}
+
+// スクロールが下に近づいたら、一覧タブの続きを1バッチ追加描画する
+function loadMoreListItems() {
+  if (state.listRenderedCount >= state.listRenderItems.length) return;
+  state.listRenderedCount = appendRenderBatch(state.listRenderItems, state.listRenderedCount, 'quote-list', item => item.locked ? LOCKED_CARD_HTML : quoteListItemHtml(item.quote));
 }
 
 // ── 管理者モード ロック/解除ボタン（管理タブ・設定タブ共通） ──
@@ -1071,16 +1114,47 @@ function updateAdminLockUI() {
 function toggleAdminLock() {
   if (state.isAdmin) {
     state.isAdmin = false;
+    // 管理者モード中に本来未解放のテーマを選んでいた場合は、解除と同時に元に戻す
+    let message = '管理者モードを終了しました';
+    if (!isThemeGenuinelyUnlocked(state.settings.theme)) {
+      state.settings.theme = 'default';
+      Storage.saveSettings(state.settings);
+      applyTheme(state.settings.theme);
+      renderThemeSwatches();
+      message = '管理者モードを終了しました（未解放のテーマだったため表示を元に戻しました）';
+    }
     updateAdminLockUI();
     renderManage();
-    showToast('管理者モードを終了しました');
+    showToast(message);
   } else {
     openAdminPinModal();
   }
 }
 
 // ── 管理タブ描画 ──────────────────────────────────────────
+function manageItemHtml(item) {
+  const q = item.quote;
+  const rank = RANK_META[q.rarity];
+  const cLabel = categoryLabel(q);
+  return `
+    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
+      ${rankRingHtml(q.rarity)}
+      ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
+      <div class="manage-item-content">
+        <div class="manage-item-text">${escapeHtml(q.text)}</div>
+        <div class="manage-item-author">${escapeHtml(q.author)}${cLabel ? `　<span style="font-weight:normal;">${cLabel}</span>` : ''}${item.isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
+      </div>
+      ${state.isAdmin ? `
+      <div class="manage-item-actions">
+        <button class="btn-edit" data-id="${q.id}">編集</button>
+        <button class="btn-delete" data-id="${q.id}">削除</button>
+      </div>` : ''}
+    </div>
+  `;
+}
+
 function renderManage() {
+  document.querySelector('main').scrollTop = 0; // 並び替え・絞り込み直後に古いスクロール位置が残らないようにする
   const addBtn = document.getElementById('add-quote-btn');
 
   addBtn.style.display = state.isAdmin ? 'flex' : 'none';
@@ -1104,28 +1178,21 @@ function renderManage() {
     document.getElementById('manage-list').innerHTML = (search || !manageAllCategoriesSelected)
       ? '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>'
       : '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
+    state.manageRenderItems = [];
+    state.manageRenderedCount = 0;
     return;
   }
-  document.getElementById('manage-list').innerHTML = quotes.map(q => {
-    const isLocked = state.isAdmin && !unlockedIds.includes(q.id);
-    const rank = RANK_META[q.rarity];
-    const cLabel = categoryLabel(q);
-    return `
-    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
-      ${rankRingHtml(q.rarity)}
-      ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
-      <div class="manage-item-content">
-        <div class="manage-item-text">${escapeHtml(q.text)}</div>
-        <div class="manage-item-author">${escapeHtml(q.author)}${cLabel ? `　<span style="font-weight:normal;">${cLabel}</span>` : ''}${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
-      </div>
-      ${state.isAdmin ? `
-      <div class="manage-item-actions">
-        <button class="btn-edit" data-id="${q.id}">編集</button>
-        <button class="btn-delete" data-id="${q.id}">削除</button>
-      </div>` : ''}
-    </div>
-  `;
-  }).join('');
+
+  const items = quotes.map(q => ({ quote: q, isLocked: state.isAdmin && !unlockedIds.includes(q.id) }));
+  state.manageRenderItems = items;
+  document.getElementById('manage-list').innerHTML = '';
+  state.manageRenderedCount = appendRenderBatch(items, 0, 'manage-list', manageItemHtml);
+}
+
+// スクロールが下に近づいたら、管理タブの続きを1バッチ追加描画する
+function loadMoreManageItems() {
+  if (state.manageRenderedCount >= state.manageRenderItems.length) return;
+  state.manageRenderedCount = appendRenderBatch(state.manageRenderItems, state.manageRenderedCount, 'manage-list', manageItemHtml);
 }
 
 // ── 管理者PINモーダル ────────────────────────────────────
@@ -1215,11 +1282,25 @@ function bindEvents() {
     renderManage();
   });
 
-  // ページトップへ戻るボタン
+  // 画面回転・リサイズ時に固定バーの高さが変わる場合があるので、本文側の余白を再計算する
+  window.addEventListener('resize', () => {
+    if (state.currentTab === 'list' || state.currentTab === 'manage') {
+      const toolbar = document.getElementById(`${state.currentTab}-toolbar`);
+      const section = document.getElementById(`tab-${state.currentTab}`);
+      pinStickyToolbarSpacing(toolbar, section);
+    }
+  });
+
+  // ページトップへ戻るボタン／一覧・管理タブの追加読み込み
   const scrollTopBtn = document.getElementById('scroll-top-btn');
   const mainEl = document.querySelector('main');
   mainEl.addEventListener('scroll', () => {
     scrollTopBtn.classList.toggle('show', mainEl.scrollTop > 300);
+
+    const nearBottom = mainEl.scrollTop + mainEl.clientHeight > mainEl.scrollHeight - 400;
+    if (!nearBottom) return;
+    if (state.currentTab === 'list') loadMoreListItems();
+    else if (state.currentTab === 'manage') loadMoreManageItems();
   });
   scrollTopBtn.addEventListener('click', () => {
     mainEl.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1403,16 +1484,33 @@ function switchTab(tab) {
   state.currentTab = tab;
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active', 'slide-right', 'slide-left'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  // 検索・並び替えバーはposition:fixedでtab-sectionの外にあるため、別途表示を切り替える
+  // （tab-section自体はタブ切り替え時にtransformアニメーションが乗るため、
+  //   position:fixedの子要素を中に置くと基準がtab-sectionにズレて一瞬位置がおかしくなる）
+  document.querySelectorAll('.sticky-toolbar').forEach(t => t.classList.remove('active'));
   const newSection = document.getElementById(`tab-${tab}`);
   newSection.classList.add('active', slideClass);
   const newBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
   newBtn.classList.add('active');
   document.getElementById('header-title-text').textContent = TAB_LABELS[tab] || TAB_LABELS.home;
-  // 一覧タブは未解放プレースホルダーを含め描画量が多いため、
+  if (tab === 'list' || tab === 'manage') {
+    const toolbar = document.getElementById(`${tab}-toolbar`);
+    toolbar.classList.add('active');
+    // position:fixedにした検索・並び替えバーは通常のレイアウトの流れから外れるため、
+    // 隠れてしまわないよう本文側に固定バーの高さぶんの余白を確保する
+    pinStickyToolbarSpacing(toolbar, newSection);
+  }
+  // 一覧・管理タブはカード枚数が多く描画量が多いため、
   // スライドアニメーションが再生を始めてから重い再描画を行うよう1フレーム遅らせる
   if (tab === 'list') requestAnimationFrame(renderList);
-  if (tab === 'manage') renderManage();
+  if (tab === 'manage') requestAnimationFrame(renderManage);
   if (tab === 'settings') renderSettings();
+}
+
+function pinStickyToolbarSpacing(toolbar, section) {
+  const body = section.querySelector('.tab-body-pad');
+  if (!toolbar || !body) return;
+  body.style.paddingTop = (toolbar.offsetHeight + 20) + 'px';
 }
 
 // ── モーダル表示中の背面スクロール制御 ────────────────────
