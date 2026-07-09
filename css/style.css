@@ -62,6 +62,7 @@ button { -webkit-tap-highlight-color: transparent; }
 
 html, body {
   height: 100%;
+  overflow: hidden; /* スクロールはmain内部だけで行う設計のため、外側は固定してposition:fixed要素の基準幅を安定させる */
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
   background: var(--bg);
   color: var(--text);
@@ -913,14 +914,15 @@ main {
 .sticky-toolbar {
   display: none;
   position: fixed;
-  top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  /* サブピクセルの丸めでヘッダーとの間に隙間ができないよう、1px分重ねる */
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px) - 1px);
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
   z-index: 5;
   background: #14122a;
-  padding: 20px 16px 4px;
+  padding: 21px 16px 4px;
 }
 
 .sticky-toolbar.active {
@@ -1384,13 +1386,6 @@ main {
   align-self: stretch;
 }
 
-.admin-status {
-  font-size: 0.82rem;
-  font-weight: bold;
-  color: var(--primary-light);
-  white-space: nowrap;
-}
-
 .admin-lock-btn {
   width: 46px;
   flex-shrink: 0;
@@ -1406,6 +1401,13 @@ main {
 
 .search-row .admin-lock-btn {
   align-self: stretch;
+}
+
+/* 管理タブは文字ではなく、解除中は枠色を変えて示す */
+.admin-lock-group .admin-lock-btn.unlocked {
+  border-color: var(--primary);
+  color: var(--primary-light);
+  box-shadow: 0 0 6px rgba(200, 148, 59, 0.5);
 }
 
 .settings-row .admin-lock-btn {
@@ -1705,6 +1707,11 @@ details[open] > .accordion-summary .accordion-caret {
   font-size: 0.75rem;
   color: rgba(255, 248, 230, 0.5);
   margin-top: 2px;
+}
+
+.settings-sublabel.is-active {
+  color: var(--primary-light);
+  font-weight: bold;
 }
 
 /* トグル */

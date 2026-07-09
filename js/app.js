@@ -1100,13 +1100,15 @@ function updateAdminLockUI() {
 
   document.getElementById('admin-lock-path').setAttribute('d', path);
   document.getElementById('admin-lock-btn').setAttribute('aria-label', label);
-  document.getElementById('admin-status').style.display = state.isAdmin ? 'inline' : 'none';
+  // 管理タブは文字ではなく、鍵アイコンの枠色で解除中かどうかを示す
+  document.getElementById('admin-lock-btn').classList.toggle('unlocked', state.isAdmin);
 
   document.getElementById('admin-lock-path-settings').setAttribute('d', path);
   document.getElementById('admin-lock-btn-settings').setAttribute('aria-label', label);
   document.getElementById('admin-settings-sublabel').textContent = state.isAdmin
     ? '管理者モード中です'
     : 'PINコードを入力して管理者モードにします';
+  document.getElementById('admin-settings-sublabel').classList.toggle('is-active', state.isAdmin);
   renderCompanionTestRow();
   renderThemeSwatches();
 }
