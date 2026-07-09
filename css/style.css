@@ -188,14 +188,6 @@ main {
 .tab-section.slide-right { animation: slideInFromRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .tab-section.slide-left  { animation: slideInFromLeft  0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 
-@keyframes navBounce {
-  0%, 100% { transform: translateY(0)   scale(1);    }
-  40%      { transform: translateY(-6px) scale(1.15); }
-  70%      { transform: translateY(-2px) scale(1.05); }
-}
-
-.nav-btn.bounce .nav-icon { animation: navBounce 0.35s ease; }
-
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
@@ -301,9 +293,7 @@ main {
 .seg-mythic  { background: linear-gradient(90deg, #8B5CF6, #F0C878); }
 
 .quote-card {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(20, 14, 38, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-left: 4px solid var(--primary);
   border-radius: var(--radius);
@@ -372,8 +362,9 @@ main {
   100%     { opacity: 0; background-position: 100% 100%; }
 }
 
+.quote-card.rank-rare,
 .quote-list-item.rank-rare {
-  background: rgba(15, 10, 35, 0.95);
+  background: linear-gradient(135deg, #2b2f38 0%, #5c6270 50%, #2b2f38 100%);
   overflow: hidden;
 }
 
@@ -393,11 +384,12 @@ main {
   pointer-events: none;
 }
 
+.quote-card.rank-super,
 .quote-list-item.rank-super {
-  background: rgba(20, 14, 8, 0.95);
+  background: rgba(45, 32, 15, 0.95);
   overflow: hidden;
 }
-.quote-card.rank-super { border-left: none; overflow: hidden; }
+.quote-card.rank-super { border-left: none; }
 
 .rank-super .rank-badge { background: rgba(200,148,59,0.3); color: #fffde7; border: 1px solid rgba(255,253,231,0.5); }
 
@@ -740,6 +732,9 @@ main {
   background: #2a3560;
   border: 1px solid rgba(255, 255, 255, 0.3);
   transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .streak-dot.done {
@@ -769,14 +764,11 @@ main {
 
 .streak-dot.done::after {
   content: '';
-  position: absolute;
-  left: 6px;
-  top: 3px;
   width: 6px;
-  height: 11px;
+  height: 10px;
   border: solid #0d1a4a;
-  border-width: 0 2.5px 2.5px 0;
-  transform: rotate(45deg);
+  border-width: 0 3.5px 3.5px 0;
+  transform: translateY(-1px) rotate(45deg);
 }
 
 .streak-current {
@@ -789,18 +781,18 @@ main {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
   transition: left 0.5s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .streak-current::after {
   content: '';
-  position: absolute;
-  left: 6px;
-  top: 3px;
   width: 6px;
-  height: 11px;
+  height: 10px;
   border: solid #0d1a4a;
-  border-width: 0 2.5px 2.5px 0;
-  transform: rotate(45deg);
+  border-width: 0 3.5px 3.5px 0;
+  transform: translateY(-1px) rotate(45deg);
 }
 
 /* ログインボーナスバナー（未受取） */
@@ -967,11 +959,9 @@ main {
   flex-shrink: 0;
   width: 34px;
   height: 34px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(20, 14, 38, 0.45);
   border: 1.5px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease;
 }
@@ -997,9 +987,7 @@ main {
   padding: 7px 14px;
   border: 1.5px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(20, 14, 38, 0.45);
   color: rgba(255, 248, 230, 0.9);
   font-size: 0.8rem;
   font-family: inherit;
@@ -1209,9 +1197,7 @@ main {
 }
 
 .quote-list-item {
-  background: rgba(255, 255, 255, 0);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(20, 14, 38, 0.55);
   border: 2px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   padding: 14px 16px;
@@ -1468,9 +1454,7 @@ main {
 
 /* 設定タブ */
 .settings-section {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(20, 14, 38, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
   margin-bottom: 16px;
@@ -1972,7 +1956,7 @@ html[data-theme="snow"] .snow-layer {
   color: rgba(255, 255, 255, 0.4);
   font-size: 0.62rem;
   letter-spacing: 0.04em;
-  transition: color 0.2s;
+  transition: color 0.2s, background-color 0.2s;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1985,10 +1969,15 @@ html[data-theme="snow"] .snow-layer {
 
 .nav-btn.active { color: var(--primary); }
 
+.nav-btn.active .nav-icon {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 4px rgba(200, 148, 59, 0.6));
+}
+
 .nav-icon {
   width: 22px;
   height: 22px;
-  display: white;
+  transition: transform 0.2s, filter 0.2s;
 }
 
 /* モーダル */
@@ -2122,8 +2111,6 @@ html[data-theme="snow"] .snow-layer {
 /* 名言追加・編集モーダルも一覧・詳細画面と同じ暗いテーマに統一 */
 .dark-form-modal-box {
   background: rgba(20, 10, 40, 0.97);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
 }
 
@@ -2303,8 +2290,6 @@ html[data-theme="snow"] .snow-layer {
 /* ── 一覧：未解放カード ──────────────────────────────── */
 .quote-list-item.locked {
   background: rgba(20, 16, 40, 0.4);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: 1px dashed rgba(255,255,255,0.08);
   min-height: 68px;
   display: flex;
@@ -2332,9 +2317,7 @@ html[data-theme="snow"] .snow-layer {
   width: 440px;
   max-width: 94vw;
   padding-top: 40px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #14122a;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   position: relative;
@@ -2373,9 +2356,7 @@ html[data-theme="snow"] .snow-layer {
   width: 380px;
   max-width: 90vw;
   padding-top: 40px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #14122a;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   position: relative;
@@ -2424,9 +2405,7 @@ html[data-theme="snow"] .snow-layer {
   width: 340px;
   max-width: 90vw;
   padding-top: 40px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #14122a;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   position: relative;
@@ -2667,34 +2646,6 @@ main::-webkit-scrollbar { display: none; }
 main { scrollbar-width: none; }
 
 
-/* リップルエフェクト */
-.add-btn,
-.btn-save,
-.btn-cancel,
-.btn-edit,
-.btn-delete,
-.admin-lock-btn {
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-btn { position: relative; }
-
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(0);
-  animation: rippleEffect 1.1s linear;
-  pointer-events: none;
-}
-
-@keyframes rippleEffect {
-  to {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
 
 /* お気に入り追加：スターバースト＋フラッシュ */
 .star-burst-ray {

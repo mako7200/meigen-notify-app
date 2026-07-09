@@ -323,13 +323,13 @@ function startSakuraPetals() {
   const layer = document.getElementById('petal-layer');
   if (!layer) return;
   petalIntervalBack = setInterval(() => spawnPetal(layer, {
-    minSize: 14, maxSize: 20, minDuration: 32, maxDuration: 44, sway: 35, blur: 1.5, opacity: 0.5,
+    minSize: 14, maxSize: 20, minDuration: 32, maxDuration: 44, sway: 35, opacity: 0.5,
     glow: '0 0 3px rgba(255, 170, 210, 0.7)'
-  }), 700);
+  }), 2800);
   petalIntervalFront = setInterval(() => spawnPetal(layer, {
     minSize: 22, maxSize: 30, minDuration: 20, maxDuration: 28, sway: 60,
     glow: '0 0 6px rgba(255, 170, 210, 0.9)'
-  }), 700);
+  }), 2800);
 }
 
 function stopSakuraPetals() {
@@ -449,14 +449,14 @@ function startSnowEffect() {
   if (!layer) return;
   snowIntervalBack = setInterval(() => spawnSnow(layer, {
     sizeByType: { snowflake: { min: 10, max: 16 }, snowball: { min: 5, max: 8 } },
-    minDuration: 32, maxDuration: 44, sway: 20, blur: 1, opacity: 0.5,
+    minDuration: 32, maxDuration: 44, sway: 20, opacity: 0.5,
     glow: '0 0 2px rgba(255, 255, 255, 0.6)'
-  }), 700);
+  }), 2800);
   snowIntervalFront = setInterval(() => spawnSnow(layer, {
     sizeByType: { snowflake: { min: 16, max: 24 }, snowball: { min: 8, max: 12 } },
     minDuration: 20, maxDuration: 28, sway: 30,
     glow: '0 0 4px rgba(255, 255, 255, 0.9)'
-  }), 700);
+  }), 2800);
 }
 
 function stopSnowEffect() {
@@ -647,7 +647,6 @@ function init() {
   renderManage();
   renderSettings();
   bindEvents();
-  initRipple();
   initSplash();
   initInstallBanner();
   initCatWidget();
@@ -1039,19 +1038,10 @@ function renderList() {
   }).join('');
 
   // 未解放の名言は鍵アイコン＋？？？（フィルターなしのときのみ表示）
+  // アイコンはindex.html側で1つだけ定義したSVGシンボルをuseで参照し、生成コストを抑える
   if (!state.listFavoriteOnly && !search && allCategoriesSelected) {
-    for (let i = 0; i < totalLocked; i++) {
-      html += `
-        <div class="quote-list-item locked">
-          <div class="locked-content">
-            <svg class="lock-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="5" y="11" width="14" height="10" rx="2"/>
-              <path d="M8 11V7a4 4 0 018 0v4"/>
-            </svg>
-          </div>
-        </div>
-      `;
-    }
+    const lockedCard = '<div class="quote-list-item locked"><div class="locked-content"><svg class="lock-svg"><use href="#icon-lock"></use></svg></div></div>';
+    html += lockedCard.repeat(totalLocked);
   }
 
   document.getElementById('quote-list').innerHTML = html;
@@ -1412,14 +1402,15 @@ function switchTab(tab) {
   const slideClass = nextIndex >= prevIndex ? 'slide-right' : 'slide-left';
   state.currentTab = tab;
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active', 'slide-right', 'slide-left'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'bounce'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const newSection = document.getElementById(`tab-${tab}`);
   newSection.classList.add('active', slideClass);
   const newBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
-  newBtn.classList.add('active', 'bounce');
-  setTimeout(() => newBtn.classList.remove('bounce'), 350);
+  newBtn.classList.add('active');
   document.getElementById('header-title-text').textContent = TAB_LABELS[tab] || TAB_LABELS.home;
-  if (tab === 'list') renderList();
+  // 一覧タブは未解放プレースホルダーを含め描画量が多いため、
+  // スライドアニメーションが再生を始めてから重い再描画を行うよう1フレーム遅らせる
+  if (tab === 'list') requestAnimationFrame(renderList);
   if (tab === 'manage') renderManage();
   if (tab === 'settings') renderSettings();
 }
@@ -1694,27 +1685,6 @@ function showUpdateBanner(worker) {
   document.getElementById('update-btn').addEventListener('click', () => {
     banner.classList.remove('show');
     worker.postMessage({ type: 'SKIP_WAITING' });
-  });
-}
-
-// ── リップルエフェクト ────────────────────────────────────
-function spawnRipple(btn, clientX, clientY) {
-  const rect = btn.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height);
-  const ripple = document.createElement('span');
-  ripple.classList.add('ripple');
-  ripple.style.width = ripple.style.height = `${size}px`;
-  ripple.style.left = `${clientX - rect.left - size / 2}px`;
-  ripple.style.top  = `${clientY - rect.top  - size / 2}px`;
-  btn.appendChild(ripple);
-  setTimeout(() => ripple.remove(), 1100);
-}
-
-function initRipple() {
-  document.addEventListener('pointerdown', e => {
-    const btn = e.target.closest('.add-btn, .nav-btn, .btn-save, .btn-cancel, .btn-edit, .btn-delete, .admin-lock-btn');
-    if (!btn) return;
-    spawnRipple(btn, e.clientX, e.clientY);
   });
 }
 
