@@ -64,7 +64,6 @@ html, body {
   height: 100vh;
   height: 100dvh;
   height: var(--real-vh, 100dvh); /* iOS standalone時のvh/dvhのズレをJS計測値で補正 */
-  overflow: hidden; /* スクロールはmain内部だけで行う設計のため、外側は固定してposition:fixed要素の基準幅を安定させる */
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
   background: var(--bg);
   color: var(--text);
