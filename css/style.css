@@ -61,7 +61,8 @@
 button { -webkit-tap-highlight-color: transparent; }
 
 html, body {
-  height: 100%;
+  height: 100vh;
+  height: 100dvh; /* アドレスバー等の表示状態に関わらず、実際に見えている高さに追従させる */
   overflow: hidden; /* スクロールはmain内部だけで行う設計のため、外側は固定してposition:fixed要素の基準幅を安定させる */
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
   background: var(--bg);
