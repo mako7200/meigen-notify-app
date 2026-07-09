@@ -1,9 +1,11 @@
 'use strict';
 
-// iOSのホーム画面追加（standalone）時、vh/dvhの計算がWKWebViewの実表示範囲と食い違うことがあるため、
-// window.innerHeightを直接測定してCSS変数に反映する
+// iOSのホーム画面追加（standalone）時、window.innerHeightがステータスバー分だけ実際の画面より
+// 短く報告される不具合があるため、standalone時のみwindow.screen.height（実際の画面の高さ）を使う
 function updateRealViewportHeight() {
-  document.documentElement.style.setProperty('--real-vh', window.innerHeight + 'px');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const h = isStandalone ? window.screen.height : window.innerHeight;
+  document.documentElement.style.setProperty('--real-vh', h + 'px');
 }
 updateRealViewportHeight();
 window.addEventListener('resize', updateRealViewportHeight);
