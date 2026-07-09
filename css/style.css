@@ -82,6 +82,7 @@ html.modal-open {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* アドレスバー等の表示状態に関わらず、実際に見えている高さに追従させる */
   max-width: 480px;
   margin: 0 auto;
   position: relative;
