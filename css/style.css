@@ -184,10 +184,9 @@ main {
   display: block;
 }
 
-/* 検索・並び替えを固定表示するタブ（一覧・管理）は、
+/* 検索・並び替えを固定表示するタブ（一覧）は、
    タブ自体のパディングをやめて中身側で持つことで、固定要素にマイナスマージンを使わずに済むようにする */
-#tab-list,
-#tab-manage {
+#tab-list {
   padding: 0;
 }
 
@@ -199,19 +198,6 @@ main {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes slideInFromRight {
-  from { transform: translateX(28px); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-
-@keyframes slideInFromLeft {
-  from { transform: translateX(-28px); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-}
-
-.tab-section.slide-right { animation: slideInFromRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-.tab-section.slide-left  { animation: slideInFromLeft  0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }
@@ -231,6 +217,52 @@ main {
   flex-direction: column;
 }
 
+/* 相棒タブ（Coming Soon） */
+#tab-companion.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.companion-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.companion-mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(240, 200, 120, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-light);
+}
+
+.companion-mark svg {
+  width: 28px;
+  height: 28px;
+}
+
+.companion-soon {
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.28em;
+  color: var(--primary-light);
+  text-transform: uppercase;
+}
+
+.companion-jp {
+  font-size: 0.85rem;
+  color: rgba(255, 248, 230, 0.7);
+  text-align: center;
+  line-height: 1.8;
+}
+
 #tab-home #home-quote-area {
   flex: 1;
   display: flex;
@@ -238,12 +270,30 @@ main {
   justify-content: center;
 }
 
-.home-date {
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--text-light);
+.home-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 16px;
+}
+
+.home-date {
+  font-size: 0.72rem;
+  color: rgba(255, 248, 230, 0.45);
   letter-spacing: 0.05em;
+}
+
+.home-today-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #1a2550;
+  color: var(--primary-light);
+  border: 1px solid rgba(200, 148, 59, 0.5);
 }
 
 .admin-next-btn {
@@ -633,6 +683,16 @@ main {
   padding-top: 12px;
 }
 
+/* 本文のタイプ演出後にフェードインさせる（著者名・詳細ボタン・カテゴリバッジ） */
+.quote-reveal {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.quote-reveal.show {
+  opacity: 1;
+}
+
 .quote-author-row {
   display: flex;
   justify-content: flex-end;
@@ -988,6 +1048,42 @@ main {
   justify-content: space-between;
 }
 
+/* 一覧タブ：管理者モード時のみ表示する開放状況フィルター */
+.admin-filter-row {
+  display: flex;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.segmented-filter {
+  flex: 1;
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.segmented-filter .seg-btn {
+  flex: 1;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: bold;
+  color: rgba(255, 248, 230, 0.55);
+  cursor: pointer;
+}
+
+.segmented-filter .seg-btn.active {
+  background: rgba(200, 148, 59, 0.22);
+  color: var(--primary-light);
+  box-shadow: 0 0 0 1px rgba(200, 148, 59, 0.4) inset;
+}
+
 .sort-controls {
   display: flex;
   align-items: center;
@@ -1069,8 +1165,7 @@ main {
   display: block;
 }
 
-#category-filter-dropdown .sort-dropdown-menu,
-#manage-category-filter-dropdown .sort-dropdown-menu {
+#category-filter-dropdown .sort-dropdown-menu {
   left: 0;
   right: auto;
 }
@@ -1380,14 +1475,6 @@ main {
 
 .add-btn:active { background: var(--primary-dark); }
 
-.admin-lock-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  align-self: stretch;
-}
-
 .admin-lock-btn {
   width: 46px;
   flex-shrink: 0;
@@ -1401,20 +1488,15 @@ main {
   cursor: pointer;
 }
 
-.search-row .admin-lock-btn {
-  align-self: stretch;
-}
-
-/* 管理タブは文字ではなく、解除中は枠色を変えて示す */
-.admin-lock-group .admin-lock-btn.unlocked {
-  border-color: var(--primary);
-  color: var(--primary-light);
-  box-shadow: 0 0 6px rgba(200, 148, 59, 0.5);
-}
-
 .settings-row .admin-lock-btn {
   align-self: center;
   height: 40px;
+}
+
+.admin-lock-btn.unlocked {
+  border-color: var(--primary);
+  color: var(--primary-light);
+  box-shadow: 0 0 6px rgba(200, 148, 59, 0.5);
 }
 
 .admin-lock-btn svg {
@@ -1427,72 +1509,6 @@ main {
   color: rgba(255, 248, 230, 0.5);
   font-weight: normal;
 }
-
-.manage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.manage-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.manage-item-content {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.manage-item-text {
-  font-size: 0.85rem;
-  color: rgba(255, 248, 230, 0.95);
-  line-height: 1.6;
-  margin-bottom: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.manage-item-author {
-  font-size: 0.75rem;
-  color: rgba(255, 248, 230, 0.65);
-  font-weight: bold;
-}
-
-.manage-item-actions {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.btn-edit, .btn-delete {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 0.75rem;
-  cursor: pointer;
-  font-weight: bold;
-  transition: opacity 0.2s;
-}
-
-.btn-edit {
-  background: #EAF2FB;
-  color: #2980B9;
-}
-
-.btn-delete {
-  background: #FDEDEC;
-  color: var(--danger);
-}
-
-.btn-edit:active, .btn-delete:active { opacity: 0.7; }
 
 /* 設定タブ */
 .settings-section {
@@ -2394,6 +2410,65 @@ html[data-theme="snow"] .snow-layer {
   background-position: top center;
   background-repeat: no-repeat;
 }
+
+/* 詳細モーダル：管理者モード時のみ表示する開放状況・編集操作 */
+.detail-admin-status {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: bold;
+  color: rgba(255, 248, 230, 0.95);
+}
+
+.detail-admin-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.detail-admin-status.unlocked { color: var(--success); }
+.detail-admin-status.unlocked::before { background: var(--success); box-shadow: 0 0 5px rgba(39, 174, 96, 0.7); }
+.detail-admin-status.locked { color: var(--danger); }
+.detail-admin-status.locked::before { background: var(--danger); box-shadow: 0 0 5px rgba(192, 57, 43, 0.7); }
+
+.detail-admin-actions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-admin-btn {
+  flex: 0 1 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 46px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: bold;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 248, 230, 0.85);
+  cursor: pointer;
+}
+
+.detail-admin-btn svg { width: 15px; height: 15px; }
+
+.detail-admin-btn.edit { color: var(--primary-light); }
+.detail-admin-btn.edit svg { stroke: var(--primary-light); }
+.detail-admin-btn.delete { color: #e0655a; }
+.detail-admin-btn.delete svg { stroke: #e0655a; }
+.detail-admin-btn:active { opacity: 0.7; }
 
 /* レア度別内訳モーダル */
 .rarity-modal-box {

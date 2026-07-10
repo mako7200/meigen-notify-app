@@ -622,31 +622,28 @@ let state = {
   settings: {},
   currentQuote: null,
   listFilterCategories: ['historical', 'philosophy', 'business', 'sports', 'special'],
-  manageFilterCategories: ['historical', 'philosophy', 'business', 'sports', 'special'],
   listSearch: '',
-  manageSearch: '',
   listSort: 'default',
-  manageSort: 'default',
   listSortDir: 'asc',
-  manageSortDir: 'asc',
   editingId: null,
   favorites: [],
   listFavoriteOnly: false,
+  listAdminStatusFilter: 'all', // 管理者モード時のみ使用：all / unlocked / locked
   unlocked: [],   // [{ id, date }, ...]
   diary: {},      // { [quoteId]: "text" }
   isAdmin: false, // セッション中のみ有効（再読み込みでリセット）
   streak: 0,
   seasonalUnlocked: [], // 解放済み季節限定テーマのキー一覧
   catAffection: { total: 0, todayDate: '', todayCount: 0 },
-  // 一覧・管理タブの小分け描画用（スクロールに応じて追加描画する）
+  // 一覧タブの小分け描画用（スクロールに応じて追加描画する）
   listRenderItems: [],
-  listRenderedCount: 0,
-  manageRenderItems: [],
-  manageRenderedCount: 0
+  listRenderedCount: 0
 };
 
 let typewriterTimer = null;
 let audioCtx = null;
+let preAdminPreviewQuote = null; // 管理者モードのプレビュー中に、本来ホームに出ていた名言を退避しておく
+let preReplayQuote = null; // 一般ユーザーがReplayした際に、本来ホームに出ていた名言を退避しておく（ホームタブを離れた時点で復元）
 
 // ── 初期化 ────────────────────────────────────────────────
 function init() {
@@ -671,7 +668,6 @@ function init() {
   applyTheme(state.settings.theme);
   renderHome();
   renderList();
-  renderManage();
   renderSettings();
   bindEvents();
   initSplash();
@@ -914,11 +910,13 @@ function closeLoginModal() {
 // ログインボーナスの受け取り処理（Home画面のバナー・ログインモーダル内タップ、共通で呼び出す）
 function performBonusClaim() {
   const bonusQuotes = claimBonusQuote();
-  const bonusQuote = bonusQuotes[0];
+  const bonusQuote = bonusQuotes[bonusQuotes.length - 1]; // 2枚引けた場合は、最後に引いた方＝最新の1枚を表示する
+  // 本物の新しい解放なので、Preview/Replay用に退避していた「戻し先」は古い情報になる。破棄する
+  preAdminPreviewQuote = null;
+  preReplayQuote = null;
   state.currentQuote = bonusQuote;
   renderHome();
   renderList();
-  renderManage();
   if (bonusQuotes.length > 1) {
     showToast(`条件のレア度を集め尽くしていたため、代わりに${bonusQuotes.length}枚解放しました`);
   }
@@ -927,10 +925,7 @@ function performBonusClaim() {
       playMythicSound();
       const quoteCard = document.getElementById('quote-card');
       if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
-    }, typewriterDuration(bonusQuote.text));
-  }
-  if (bonusQuote.rarity) {
-    setTimeout(wakeCat, typewriterDuration(bonusQuote.text));
+    }, typewriterDuration(bonusQuote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
   }
 }
 
@@ -958,7 +953,7 @@ function renderHome() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日（${['日','月','火','水','木','金','土'][today.getDay()]}）`;
 
-  document.getElementById('home-date').textContent = dateStr + '　今日の一言';
+  document.getElementById('home-date').textContent = dateStr;
   renderStreakIndicator();
   renderBonusArea();
 
@@ -971,21 +966,23 @@ function renderHome() {
   const isFav = state.favorites.includes(q.id);
   const rank = RANK_META[q.rarity];
   const cLabel = categoryLabel(q);
+  // レア度演出・著者名・詳細ボタンは、本文のタイプ演出が終わってから遅れて見せる（ネタバレ防止）ため、
+  // ここでは付与せず、revealCardDetails()で後から反映する
   document.getElementById('home-quote-area').innerHTML = `
-    <div class="quote-card${rank ? ' ' + rank.class : ''}${characterBgClass(q)}" id="quote-card"${mythicStyleAttr(q, true)}>
-      ${rankRingHtml(q.rarity)}
+    <div class="quote-card${characterBgClass(q)}" id="quote-card">
+      <span id="quote-rank-ring"></span>
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
       <div class="quote-text" id="quote-text"></div>
-      <div class="quote-author-row">
+      <div class="quote-author-row quote-reveal" id="quote-author-reveal">
         <span class="quote-author-name">${escapeHtml(q.author)}</span>
       </div>
-      <div class="quote-meta-row">
-        <button class="card-detail-btn" id="card-detail-btn">
+      <div class="quote-meta-row" id="quote-meta-row">
+        <button class="card-detail-btn quote-reveal" id="card-detail-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><circle cx="12" cy="8.25" r="0.75" fill="currentColor" stroke="none"/></svg>
           名言の詳細
           <svg class="btn-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
         </button>
-        ${cLabel ? `<span class="category-badge">${cLabel}</span>` : ''}
+        ${cLabel ? `<span class="category-badge quote-reveal" id="quote-category-badge">${cLabel}</span>` : ''}
       </div>
     </div>
   `;
@@ -1014,14 +1011,53 @@ function renderHome() {
 
   if (!document.getElementById('splash')) {
     typewriter(document.getElementById('quote-text'), q.text);
+    scheduleCardDetailsReveal(q);
   }
+}
+
+// 本文のタイプ演出が終わってから、著者名（＋レア度演出）→ カテゴリバッジ → 詳細ボタンの順に段階的に見せる
+function scheduleCardDetailsReveal(q) {
+  const base = typewriterDuration(q.text);
+  setTimeout(() => revealCardAuthor(q), base + 2000);
+  setTimeout(() => revealCardBadge(), base + 3000);
+  setTimeout(() => revealCardDetailButton(), base + 5000);
+}
+
+function revealCardAuthor(q) {
+  const card = document.getElementById('quote-card');
+  if (!card) return; // タブ切り替え等で既に描画し直されている場合は何もしない
+  const rank = RANK_META[q.rarity];
+  if (rank) card.classList.add(rank.class);
+  if (q.rarity === 'mythic') {
+    const c = (q.themeColors && q.themeColors.length) ? q.themeColors : MYTHIC_DEFAULT_COLORS;
+    card.style.setProperty('--mc1', c[0]);
+    card.style.setProperty('--mc2', c[1]);
+    card.style.setProperty('--mc3', c[2] || c[0]);
+    if (q.characterImage) {
+      card.style.backgroundImage = `linear-gradient(180deg, rgba(10,6,20,0.35) 0%, rgba(10,6,20,0.65) 55%, rgba(10,6,20,0.92) 100%), url('${q.characterImage}')`;
+    }
+  }
+  const ringEl = document.getElementById('quote-rank-ring');
+  if (ringEl) ringEl.outerHTML = rankRingHtml(q.rarity) || '<span id="quote-rank-ring"></span>';
+  const authorEl = document.getElementById('quote-author-reveal');
+  if (authorEl) authorEl.classList.add('show');
+}
+
+function revealCardBadge() {
+  const badgeEl = document.getElementById('quote-category-badge');
+  if (badgeEl) badgeEl.classList.add('show');
+}
+
+function revealCardDetailButton() {
+  const btnEl = document.getElementById('card-detail-btn');
+  if (btnEl) btnEl.classList.add('show');
 }
 
 // ── 一覧タブ描画 ──────────────────────────────────────────
 const RENDER_BATCH_SIZE = 20;
 const LOCKED_CARD_HTML = '<div class="quote-list-item locked"><div class="locked-content"><svg class="lock-svg"><use href="#icon-lock"></use></svg></div></div>';
 
-function quoteListItemHtml(q) {
+function quoteListItemHtml(q, isLocked) {
   const isFav = state.favorites.includes(q.id);
   const hasDiary = state.diary[q.id] && state.diary[q.id].trim();
   const rank = RANK_META[q.rarity];
@@ -1033,7 +1069,7 @@ function quoteListItemHtml(q) {
       <button class="list-fav-btn${isFav ? ' active' : ''}" data-id="${q.id}">${isFav ? '★' : '☆'}</button>
       <div class="quote-list-text">${escapeHtml(q.text)}</div>
       <div class="quote-list-meta">
-        <span class="quote-list-author">${escapeHtml(q.author)}</span>
+        <span class="quote-list-author">${escapeHtml(q.author)}${isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</span>
         ${cLabel ? `<span class="category-badge">${cLabel}</span>` : ''}
       </div>
       ${hasDiary ? '<div class="diary-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> コメントあり</div>' : ''}
@@ -1060,20 +1096,28 @@ function renderList() {
 
   const categoryFilterTotal = document.querySelectorAll('.category-filter-checkbox').length;
   const allCategoriesSelected = state.listFilterCategories.length === categoryFilterTotal;
-  let unlockedQuotes = state.quotes.filter(q => {
-    if (!unlockedIds.includes(q.id)) return false;
+
+  // 管理者モード中は未解放の名言も本文込みで表示し、編集・削除の対象にできるようにする
+  const baseQuotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
+  let quotes = baseQuotes.filter(q => {
     if (state.listFavoriteOnly && !state.favorites.includes(q.id)) return false;
     if (!state.listFilterCategories.includes(q.category)) return false;
+    if (state.isAdmin) {
+      const isUnlocked = unlockedIds.includes(q.id);
+      if (state.listAdminStatusFilter === 'unlocked' && !isUnlocked) return false;
+      if (state.listAdminStatusFilter === 'locked' && isUnlocked) return false;
+    }
     if (search) return q.text.toLowerCase().includes(search) || q.author.toLowerCase().includes(search);
     return true;
   });
-  unlockedQuotes = sortQuotes(unlockedQuotes, state.listSort, state.listSortDir);
+  quotes = sortQuotes(quotes, state.listSort, state.listSortDir);
 
   const totalLocked = state.quotes.length - unlockedIds.length;
   document.getElementById('progress-count').textContent = `${unlockedIds.length} / ${state.quotes.length}`;
   renderProgressTrack();
 
-  if (unlockedQuotes.length === 0 && (state.listFavoriteOnly || search || !allCategoriesSelected)) {
+  const adminStatusFiltered = state.isAdmin && state.listAdminStatusFilter !== 'all';
+  if (quotes.length === 0 && (state.listFavoriteOnly || search || !allCategoriesSelected || adminStatusFiltered)) {
     document.getElementById('quote-list').innerHTML = state.listFavoriteOnly
       ? '<div class="empty-state"><div class="empty-icon">☆</div><p>お気に入りがまだありません。<br>ホームの星マークで追加してください。</p></div>'
       : '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>';
@@ -1084,23 +1128,23 @@ function renderList() {
 
   // 実際のカードと未解放プレースホルダーを1本の配列にまとめ、まとめて少しずつ描画する
   // アイコンはindex.html側で1つだけ定義したSVGシンボルをuseで参照し、生成コストを抑える
-  const items = unlockedQuotes.map(q => ({ locked: false, quote: q }));
-  if (!state.listFavoriteOnly && !search && allCategoriesSelected) {
+  const items = quotes.map(q => ({ locked: false, quote: q, isLocked: state.isAdmin && !unlockedIds.includes(q.id) }));
+  if (!state.isAdmin && !state.listFavoriteOnly && !search && allCategoriesSelected) {
     for (let i = 0; i < totalLocked; i++) items.push({ locked: true });
   }
 
   state.listRenderItems = items;
   document.getElementById('quote-list').innerHTML = '';
-  state.listRenderedCount = appendRenderBatch(items, 0, 'quote-list', item => item.locked ? LOCKED_CARD_HTML : quoteListItemHtml(item.quote));
+  state.listRenderedCount = appendRenderBatch(items, 0, 'quote-list', item => item.locked ? LOCKED_CARD_HTML : quoteListItemHtml(item.quote, item.isLocked));
 }
 
 // スクロールが下に近づいたら、一覧タブの続きを1バッチ追加描画する
 function loadMoreListItems() {
   if (state.listRenderedCount >= state.listRenderItems.length) return;
-  state.listRenderedCount = appendRenderBatch(state.listRenderItems, state.listRenderedCount, 'quote-list', item => item.locked ? LOCKED_CARD_HTML : quoteListItemHtml(item.quote));
+  state.listRenderedCount = appendRenderBatch(state.listRenderItems, state.listRenderedCount, 'quote-list', item => item.locked ? LOCKED_CARD_HTML : quoteListItemHtml(item.quote, item.isLocked));
 }
 
-// ── 管理者モード ロック/解除ボタン（管理タブ・設定タブ共通） ──
+// ── 管理者モード ロック/解除ボタン（設定タブ） ──
 const ADMIN_LOCK_OPEN_PATH = 'M8 11V7a4 4 0 018 0v4';
 const ADMIN_LOCK_CLOSED_PATH = 'M8 11V7a4 4 0 017.75-1.5';
 
@@ -1108,17 +1152,18 @@ function updateAdminLockUI() {
   const label = state.isAdmin ? 'ロックする' : '管理者モードにする';
   const path = state.isAdmin ? ADMIN_LOCK_CLOSED_PATH : ADMIN_LOCK_OPEN_PATH;
 
-  document.getElementById('admin-lock-path').setAttribute('d', path);
-  document.getElementById('admin-lock-btn').setAttribute('aria-label', label);
-  // 管理タブは文字ではなく、鍵アイコンの枠色で解除中かどうかを示す
-  document.getElementById('admin-lock-btn').classList.toggle('unlocked', state.isAdmin);
-
   document.getElementById('admin-lock-path-settings').setAttribute('d', path);
   document.getElementById('admin-lock-btn-settings').setAttribute('aria-label', label);
+  document.getElementById('admin-lock-btn-settings').classList.toggle('unlocked', state.isAdmin);
   document.getElementById('admin-settings-sublabel').textContent = state.isAdmin
     ? '管理者モード中です'
     : 'PINコードを入力して管理者モードにします';
   document.getElementById('admin-settings-sublabel').classList.toggle('is-active', state.isAdmin);
+
+  document.getElementById('add-quote-btn').style.display = state.isAdmin ? 'flex' : 'none';
+  document.getElementById('admin-next-quote-btn').style.display = state.isAdmin ? 'block' : 'none';
+  document.getElementById('admin-filter-row').style.display = state.isAdmin ? 'flex' : 'none';
+
   renderCompanionTestRow();
   renderThemeSwatches();
 }
@@ -1135,76 +1180,18 @@ function toggleAdminLock() {
       renderThemeSwatches();
       message = '管理者モードを終了しました（未解放のテーマだったため表示を元に戻しました）';
     }
+    // 管理者モード中にホームでプレビュー表示していた場合は、本来の表示に戻す
+    if (preAdminPreviewQuote !== null) {
+      state.currentQuote = preAdminPreviewQuote;
+      preAdminPreviewQuote = null;
+      renderHome();
+    }
     updateAdminLockUI();
-    renderManage();
+    renderList();
     showToast(message);
   } else {
     openAdminPinModal();
   }
-}
-
-// ── 管理タブ描画 ──────────────────────────────────────────
-function manageItemHtml(item) {
-  const q = item.quote;
-  const rank = RANK_META[q.rarity];
-  const cLabel = categoryLabel(q);
-  return `
-    <div class="quote-list-item manage-item${rank ? ' ' + rank.class : ''}" data-id="${q.id}"${mythicStyleAttr(q)}>
-      ${rankRingHtml(q.rarity)}
-      ${rank ? `<span class="rank-badge">${rank.label}</span>` : ''}
-      <div class="manage-item-content">
-        <div class="manage-item-text">${escapeHtml(q.text)}</div>
-        <div class="manage-item-author">${escapeHtml(q.author)}${cLabel ? `　<span style="font-weight:normal;">${cLabel}</span>` : ''}${item.isLocked ? ' <span class="locked-tag">未開放</span>' : ''}</div>
-      </div>
-      ${state.isAdmin ? `
-      <div class="manage-item-actions">
-        <button class="btn-edit" data-id="${q.id}">編集</button>
-        <button class="btn-delete" data-id="${q.id}">削除</button>
-      </div>` : ''}
-    </div>
-  `;
-}
-
-function renderManage() {
-  document.querySelector('main').scrollTop = 0; // 並び替え・絞り込み直後に古いスクロール位置が残らないようにする
-  const addBtn = document.getElementById('add-quote-btn');
-
-  addBtn.style.display = state.isAdmin ? 'flex' : 'none';
-  document.getElementById('admin-next-quote-btn').style.display = state.isAdmin ? 'block' : 'none';
-  updateAdminLockUI();
-
-  const unlockedIds = state.unlocked.map(u => u.id);
-  let quotes = state.isAdmin ? state.quotes : state.quotes.filter(q => unlockedIds.includes(q.id));
-
-  const manageCategoryFilterTotal = document.querySelectorAll('.manage-category-filter-checkbox').length;
-  const manageAllCategoriesSelected = state.manageFilterCategories.length === manageCategoryFilterTotal;
-  quotes = quotes.filter(q => state.manageFilterCategories.includes(q.category));
-
-  const search = state.manageSearch.trim().toLowerCase();
-  if (search) {
-    quotes = quotes.filter(q => q.text.toLowerCase().includes(search) || q.author.toLowerCase().includes(search));
-  }
-  quotes = sortQuotes(quotes, state.manageSort, state.manageSortDir);
-
-  if (quotes.length === 0) {
-    document.getElementById('manage-list').innerHTML = (search || !manageAllCategoriesSelected)
-      ? '<div class="empty-state"><div class="empty-icon">🔍</div><p>該当する名言が見つかりませんでした。</p></div>'
-      : '<div class="empty-state"><div class="empty-icon">✏️</div><p>開放済みの名言がありません。<br>ホームで名言を開放すると表示されます。</p></div>';
-    state.manageRenderItems = [];
-    state.manageRenderedCount = 0;
-    return;
-  }
-
-  const items = quotes.map(q => ({ quote: q, isLocked: state.isAdmin && !unlockedIds.includes(q.id) }));
-  state.manageRenderItems = items;
-  document.getElementById('manage-list').innerHTML = '';
-  state.manageRenderedCount = appendRenderBatch(items, 0, 'manage-list', manageItemHtml);
-}
-
-// スクロールが下に近づいたら、管理タブの続きを1バッチ追加描画する
-function loadMoreManageItems() {
-  if (state.manageRenderedCount >= state.manageRenderItems.length) return;
-  state.manageRenderedCount = appendRenderBatch(state.manageRenderItems, state.manageRenderedCount, 'manage-list', manageItemHtml);
 }
 
 // ── 管理者PINモーダル ────────────────────────────────────
@@ -1228,7 +1215,7 @@ function submitAdminPin() {
     state.isAdmin = true;
     closeAdminPinModal();
     updateAdminLockUI();
-    renderManage();
+    renderList();
     showToast('管理者モードにしました');
   } else {
     showToast('PINコードが違います');
@@ -1259,24 +1246,13 @@ function bindEvents() {
     renderList();
   });
 
-  // 管理：検索
-  document.getElementById('manage-search').addEventListener('input', e => {
-    state.manageSearch = e.target.value;
-    renderManage();
-  });
-
-  // 管理者モード ロック/解除ボタン（管理タブ・設定タブ共通）
-  document.getElementById('admin-lock-btn').addEventListener('click', toggleAdminLock);
+  // 管理者モード ロック/解除ボタン（設定タブ）
   document.getElementById('admin-lock-btn-settings').addEventListener('click', toggleAdminLock);
 
-  // 一覧・管理：並び替え（自作ドロップダウン）
+  // 一覧：並び替え（自作ドロップダウン）
   initSortDropdown('list-sort-dropdown', value => {
     state.listSort = value;
     renderList();
-  });
-  initSortDropdown('manage-sort-dropdown', value => {
-    state.manageSort = value;
-    renderManage();
   });
   document.addEventListener('click', () => {
     document.querySelectorAll('.sort-dropdown.open').forEach(d => d.classList.remove('open'));
@@ -1288,22 +1264,17 @@ function bindEvents() {
     updateSortDirectionBtn('list-sort-direction', state.listSortDir);
     renderList();
   });
-  document.getElementById('manage-sort-direction').addEventListener('click', () => {
-    state.manageSortDir = state.manageSortDir === 'asc' ? 'desc' : 'asc';
-    updateSortDirectionBtn('manage-sort-direction', state.manageSortDir);
-    renderManage();
-  });
 
   // 画面回転・リサイズ時に固定バーの高さが変わる場合があるので、本文側の余白を再計算する
   window.addEventListener('resize', () => {
-    if (state.currentTab === 'list' || state.currentTab === 'manage') {
-      const toolbar = document.getElementById(`${state.currentTab}-toolbar`);
-      const section = document.getElementById(`tab-${state.currentTab}`);
+    if (state.currentTab === 'list') {
+      const toolbar = document.getElementById('list-toolbar');
+      const section = document.getElementById('tab-list');
       pinStickyToolbarSpacing(toolbar, section);
     }
   });
 
-  // ページトップへ戻るボタン／一覧・管理タブの追加読み込み
+  // ページトップへ戻るボタン／一覧タブの追加読み込み
   const scrollTopBtn = document.getElementById('scroll-top-btn');
   const mainEl = document.querySelector('main');
   mainEl.addEventListener('scroll', () => {
@@ -1312,15 +1283,13 @@ function bindEvents() {
     const nearBottom = mainEl.scrollTop + mainEl.clientHeight > mainEl.scrollHeight - 400;
     if (!nearBottom) return;
     if (state.currentTab === 'list') loadMoreListItems();
-    else if (state.currentTab === 'manage') loadMoreManageItems();
   });
   scrollTopBtn.addEventListener('click', () => {
     mainEl.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  // 一覧・管理：カテゴリフィルター（複数選択ドロップダウン）
+  // 一覧：カテゴリフィルター（複数選択ドロップダウン）
   initCategoryFilterDropdown('category-filter-dropdown', 'category-filter-label', 'category-filter-checkbox', 'listFilterCategories', renderList);
-  initCategoryFilterDropdown('manage-category-filter-dropdown', 'manage-category-filter-label', 'manage-category-filter-checkbox', 'manageFilterCategories', renderManage);
 
   // 一覧：お気に入り＋カードタップ（委譲）
   document.getElementById('quote-list').addEventListener('click', e => {
@@ -1354,6 +1323,15 @@ function bindEvents() {
     renderList();
   });
 
+  // 一覧：管理者専用の開放状況フィルター（すべて／開放済／未開放）
+  document.getElementById('admin-status-filter').addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    state.listAdminStatusFilter = btn.dataset.value;
+    document.querySelectorAll('#admin-status-filter .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderList();
+  });
+
   // レア度別内訳モーダル
   document.getElementById('progress-block').addEventListener('click', openRarityModal);
   document.getElementById('rarity-modal-close').addEventListener('click', closeRarityModal);
@@ -1368,33 +1346,44 @@ function bindEvents() {
     if (e.target.id === 'login-modal-overlay') closeLoginModal();
   });
 
-  // 管理：追加ボタン
+  // 一覧：追加ボタン（管理者モード時のみ表示）
   document.getElementById('add-quote-btn').addEventListener('click', openAddModal);
 
-  // 管理：編集・削除（委譲）
-  document.getElementById('manage-list').addEventListener('click', e => {
-    const id = parseInt(e.target.dataset.id);
-    if (id) {
-      if (e.target.classList.contains('btn-edit')) { openEditModal(id); return; }
-      if (e.target.classList.contains('btn-delete')) { deleteQuote(id); return; }
-    }
-    // カード本体タップ → 管理者テスト表示としてホームに反映
-    if (!state.isAdmin) return;
-    const card = e.target.closest('.manage-item');
-    if (!card || !card.dataset.id) return;
-    const quote = state.quotes.find(q => q.id === parseInt(card.dataset.id));
+  // 名言の詳細モーダル：管理者用（プレビュー・編集・削除）
+  document.getElementById('detail-preview-btn').addEventListener('click', () => {
+    const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
+    const quote = state.quotes.find(q => q.id === id);
     if (!quote) return;
+    const isAdminPreview = state.isAdmin;
+    closeDetailModal();
+    if (isAdminPreview) {
+      // 管理者モード終了時に本来の表示へ戻せるよう、プレビュー前の状態を退避しておく
+      if (preAdminPreviewQuote === null) preAdminPreviewQuote = state.currentQuote;
+    } else {
+      // ホームタブを離れた時点で本来の表示へ戻せるよう、Replay前の状態を退避しておく
+      if (preReplayQuote === null) preReplayQuote = state.currentQuote;
+    }
     state.currentQuote = quote;
     renderHome();
     switchTab('home');
-    showToast('ホームにテスト表示しました');
+    showToast(isAdminPreview ? 'ホームにテスト表示しました' : 'ホームで演出を再生します');
     if (quote.rarity === 'mythic') {
       setTimeout(() => {
         playMythicSound();
         const quoteCard = document.getElementById('quote-card');
         if (quoteCard) spawnMythicBurst(quoteCard, quote.themeColors);
-      }, 450 + typewriterDuration(quote.text));
+      }, typewriterDuration(quote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
     }
+  });
+  document.getElementById('detail-edit-btn').addEventListener('click', () => {
+    const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
+    closeDetailModal();
+    openEditModal(id);
+  });
+  document.getElementById('detail-delete-btn').addEventListener('click', () => {
+    const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
+    closeDetailModal();
+    deleteQuote(id);
   });
 
   // 設定：通知トグル
@@ -1480,42 +1469,42 @@ function bindEvents() {
         playMythicSound();
         const quoteCard = document.getElementById('quote-card');
         if (quoteCard) spawnMythicBurst(quoteCard, quote.themeColors);
-      }, typewriterDuration(quote.text));
+      }, typewriterDuration(quote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
     }
   });
 }
 
 // ── タブ切り替え ──────────────────────────────────────────
-const TAB_ORDER = ['home', 'list', 'manage', 'settings'];
-const TAB_LABELS = { home: 'ホーム', list: '一覧', manage: '管理', settings: '設定' };
+const TAB_LABELS = { home: 'ホーム', list: '一覧', companion: '相棒', settings: '設定' };
 
 function switchTab(tab) {
-  const prevIndex = TAB_ORDER.indexOf(state.currentTab);
-  const nextIndex = TAB_ORDER.indexOf(tab);
-  const slideClass = nextIndex >= prevIndex ? 'slide-right' : 'slide-left';
+  // Replayで一時的にホームへ表示していた名言は、ホームタブを離れた時点で本来の表示に戻す
+  if (state.currentTab === 'home' && tab !== 'home' && preReplayQuote !== null) {
+    state.currentQuote = preReplayQuote;
+    preReplayQuote = null;
+    renderHome();
+  }
+
   state.currentTab = tab;
-  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active', 'slide-right', 'slide-left'));
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   // 検索・並び替えバーはposition:fixedでtab-sectionの外にあるため、別途表示を切り替える
-  // （tab-section自体はタブ切り替え時にtransformアニメーションが乗るため、
-  //   position:fixedの子要素を中に置くと基準がtab-sectionにズレて一瞬位置がおかしくなる）
   document.querySelectorAll('.sticky-toolbar').forEach(t => t.classList.remove('active'));
   const newSection = document.getElementById(`tab-${tab}`);
-  newSection.classList.add('active', slideClass);
+  newSection.classList.add('active');
   const newBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
   newBtn.classList.add('active');
   document.getElementById('header-title-text').textContent = TAB_LABELS[tab] || TAB_LABELS.home;
-  if (tab === 'list' || tab === 'manage') {
-    const toolbar = document.getElementById(`${tab}-toolbar`);
+  if (tab === 'list') {
+    const toolbar = document.getElementById('list-toolbar');
     toolbar.classList.add('active');
     // position:fixedにした検索・並び替えバーは通常のレイアウトの流れから外れるため、
     // 隠れてしまわないよう本文側に固定バーの高さぶんの余白を確保する
     pinStickyToolbarSpacing(toolbar, newSection);
+    // 一覧タブはカード枚数が多く描画量が多いため、
+    // スライドアニメーションが再生を始めてから重い再描画を行うよう1フレーム遅らせる
+    requestAnimationFrame(renderList);
   }
-  // 一覧・管理タブはカード枚数が多く描画量が多いため、
-  // スライドアニメーションが再生を始めてから重い再描画を行うよう1フレーム遅らせる
-  if (tab === 'list') requestAnimationFrame(renderList);
-  if (tab === 'manage') requestAnimationFrame(renderManage);
   if (tab === 'settings') renderSettings();
 }
 
@@ -1589,7 +1578,7 @@ function saveQuote() {
   }
   Storage.saveQuotes(state.quotes);
   closeModal();
-  renderManage();
+  renderList();
 }
 
 function deleteQuote(id) {
@@ -1598,7 +1587,7 @@ function deleteQuote(id) {
   if (!confirm(`「${q.text.substring(0, 20)}…」を削除しますか？`)) return;
   state.quotes = state.quotes.filter(q => q.id !== id);
   Storage.saveQuotes(state.quotes);
-  renderManage();
+  renderList();
   showToast('削除しました');
 }
 
@@ -1636,6 +1625,26 @@ function openDetailModal(id) {
 
   document.getElementById('detail-diary-textarea').value = existing;
   document.getElementById('detail-diary-count').textContent = existing.length;
+
+  const adminStatus = document.getElementById('detail-admin-status');
+  const editBtn = document.getElementById('detail-edit-btn');
+  const deleteBtn = document.getElementById('detail-delete-btn');
+  const isUnlocked = !!unlockInfo;
+
+  // Preview/Replayボタンは常設。開放済みなら演出の再生、未開放（管理者のみ到達）なら試し見せ、と呼び方を変える
+  document.getElementById('detail-preview-label').textContent = isUnlocked ? 'Replay' : 'Preview';
+
+  if (state.isAdmin) {
+    adminStatus.textContent = isUnlocked ? '開放済' : '未開放';
+    adminStatus.className = 'detail-admin-status ' + (isUnlocked ? 'unlocked' : 'locked');
+    adminStatus.style.display = 'flex';
+    editBtn.style.display = 'flex';
+    deleteBtn.style.display = 'flex';
+  } else {
+    adminStatus.style.display = 'none';
+    editBtn.style.display = 'none';
+    deleteBtn.style.display = 'none';
+  }
 
   const detailBox = document.querySelector('.detail-modal-box');
   if (q.characterImage) {
@@ -1848,15 +1857,19 @@ function initSplash() {
     if (e.animationName === 'splashFadeOut') {
       splash.remove();
       const el = document.getElementById('quote-text');
-      if (el && state.currentQuote) typewriter(el, state.currentQuote.text);
+      if (el && state.currentQuote) {
+        typewriter(el, state.currentQuote.text);
+        scheduleCardDetailsReveal(state.currentQuote);
+      }
       revealMythicIfNeeded();
-      wakeCatIfRareReveal();
     }
   });
 }
 
 // ── 超シークレットレア初解放時の演出 ──────────────────────
-function typewriterDuration(text, speed = 60) {
+const TYPEWRITER_SPEED = 85; // 1文字あたりのミリ秒。読み終わる前に著者名等でネタバレしないよう調整
+
+function typewriterDuration(text, speed = TYPEWRITER_SPEED) {
   return (text ? text.length : 0) * speed;
 }
 
@@ -1866,7 +1879,7 @@ function revealMythicIfNeeded() {
     playMythicSound();
     const card = document.getElementById('quote-card');
     if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
-  }, typewriterDuration(state.currentQuote.text) + 400);
+  }, typewriterDuration(state.currentQuote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
 }
 
 // ── 猫ウィジェット ────────────────────────────────────────
@@ -1923,20 +1936,6 @@ function scheduleCatIdle() {
     else if (roll < 0.2) triggerCatIdleAction('stretching');
     else scheduleCatIdle();
   }, sleepTime);
-}
-
-// レア以上の名言解放時に確実に起こす（ご褒美イベントなので気まぐれ抽選の対象外）
-function wakeCat() {
-  if (!state.settings.catEnabled || !document.getElementById('cat-widget')) return;
-  clearTimeout(catIdleTimer);
-  clearTimeout(catActionTimer);
-  setCatState('awake');
-  catActionTimer = setTimeout(scheduleCatIdle, 10000);
-}
-
-function wakeCatIfRareReveal() {
-  if (!dailyQuoteJustRevealed || !state.currentQuote || !state.currentQuote.rarity) return;
-  setTimeout(wakeCat, typewriterDuration(state.currentQuote.text));
 }
 
 // タップへの反応。管理者テスト表示からも呼び出せるよう共通化
@@ -2124,7 +2123,7 @@ function toggleFavorite(id) {
 }
 
 // ── タイプライター ────────────────────────────────────────
-function typewriter(el, text, speed = 60) {
+function typewriter(el, text, speed = TYPEWRITER_SPEED) {
   if (typewriterTimer) clearInterval(typewriterTimer);
   el.classList.add('typing');
   el.textContent = '';
