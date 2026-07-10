@@ -194,21 +194,15 @@ main {
   padding: 20px 16px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+/* タイプ演出：文字は最初からDOMにあり、1文字ずつ透明度だけ上げて見せる（カードの高さは変化しない） */
+@keyframes charFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.quote-text.typing::after {
-  content: '|';
-  color: var(--primary-light);
-  font-weight: 300;
-  animation: blink 0.7s step-end infinite;
+.quote-text span {
+  opacity: 0;
+  animation: charFadeIn 0.08s linear forwards;
 }
 
 /* ホームタブ */
@@ -267,21 +261,18 @@ main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-}
-
-.home-top {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+  justify-content: center;
+  gap: 10px;
 }
 
 .home-date {
-  font-size: 0.72rem;
-  color: rgba(255, 248, 230, 0.45);
-  letter-spacing: 0.05em;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 248, 230, 0.75);
+  letter-spacing: 0.03em;
+  margin-bottom: 14px;
 }
 
 .home-today-badge {
@@ -367,6 +358,7 @@ main {
 .seg-mythic  { background: linear-gradient(90deg, #8B5CF6, #F0C878); }
 
 .quote-card {
+  width: 100%;
   background: rgba(20, 14, 38, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-left: 4px solid var(--primary);

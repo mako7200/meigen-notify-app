@@ -640,10 +640,22 @@ let state = {
   listRenderedCount: 0
 };
 
-let typewriterTimer = null;
 let audioCtx = null;
 let preAdminPreviewQuote = null; // 管理者モードのプレビュー中に、本来ホームに出ていた名言を退避しておく
 let preReplayQuote = null; // 一般ユーザーがReplayした際に、本来ホームに出ていた名言を退避しておく（ホームタブを離れた時点で復元）
+
+// ホームのカード演出（著者名表示・超シークレットレアの効果音等）用の予約タイマー。
+// renderHome()のたびに前回分を解除しないと、古いカード向けのタイマーが新しいカードに対して誤発火する
+let pendingRevealTimers = [];
+function clearPendingRevealTimers() {
+  pendingRevealTimers.forEach(t => clearTimeout(t));
+  pendingRevealTimers = [];
+}
+function scheduleRevealTimer(fn, delay) {
+  const t = setTimeout(fn, delay);
+  pendingRevealTimers.push(t);
+  return t;
+}
 
 // ── 初期化 ────────────────────────────────────────────────
 function init() {
@@ -921,7 +933,7 @@ function performBonusClaim() {
     showToast(`条件のレア度を集め尽くしていたため、代わりに${bonusQuotes.length}枚解放しました`);
   }
   if (bonusQuote.rarity === 'mythic') {
-    setTimeout(() => {
+    scheduleRevealTimer(() => {
       playMythicSound();
       const quoteCard = document.getElementById('quote-card');
       if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
@@ -949,6 +961,7 @@ function renderBonusArea() {
 
 // ── ホームタブ描画 ────────────────────────────────────────
 function renderHome() {
+  clearPendingRevealTimers(); // 前回のカード向けに予約されていた演出タイマーを解除してから作り直す
   const q = state.currentQuote;
   const today = new Date();
   const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日（${['日','月','火','水','木','金','土'][today.getDay()]}）`;
@@ -969,6 +982,7 @@ function renderHome() {
   // レア度演出・著者名・詳細ボタンは、本文のタイプ演出が終わってから遅れて見せる（ネタバレ防止）ため、
   // ここでは付与せず、revealCardDetails()で後から反映する
   document.getElementById('home-quote-area').innerHTML = `
+    <span class="home-today-badge">今日の名言</span>
     <div class="quote-card${characterBgClass(q)}" id="quote-card">
       <span id="quote-rank-ring"></span>
       <button class="card-fav-btn${isFav ? ' active' : ''}" id="card-fav-btn">${isFav ? '★' : '☆'}</button>
@@ -1018,9 +1032,9 @@ function renderHome() {
 // 本文のタイプ演出が終わってから、著者名（＋レア度演出）→ カテゴリバッジ → 詳細ボタンの順に段階的に見せる
 function scheduleCardDetailsReveal(q) {
   const base = typewriterDuration(q.text);
-  setTimeout(() => revealCardAuthor(q), base + 2000);
-  setTimeout(() => revealCardBadge(), base + 3000);
-  setTimeout(() => revealCardDetailButton(), base + 5000);
+  scheduleRevealTimer(() => revealCardAuthor(q), base + 2000);
+  scheduleRevealTimer(() => revealCardBadge(), base + 3000);
+  scheduleRevealTimer(() => revealCardDetailButton(), base + 5000);
 }
 
 function revealCardAuthor(q) {
@@ -1368,7 +1382,7 @@ function bindEvents() {
     switchTab('home');
     showToast(isAdminPreview ? 'ホームにテスト表示しました' : 'ホームで演出を再生します');
     if (quote.rarity === 'mythic') {
-      setTimeout(() => {
+      scheduleRevealTimer(() => {
         playMythicSound();
         const quoteCard = document.getElementById('quote-card');
         if (quoteCard) spawnMythicBurst(quoteCard, quote.themeColors);
@@ -1465,7 +1479,7 @@ function bindEvents() {
     renderHome();
     if (state.currentQuote.rarity === 'mythic') {
       const quote = state.currentQuote;
-      setTimeout(() => {
+      scheduleRevealTimer(() => {
         playMythicSound();
         const quoteCard = document.getElementById('quote-card');
         if (quoteCard) spawnMythicBurst(quoteCard, quote.themeColors);
@@ -1478,6 +1492,11 @@ function bindEvents() {
 const TAB_LABELS = { home: 'ホーム', list: '一覧', companion: '相棒', settings: '設定' };
 
 function switchTab(tab) {
+  // 既に表示中のタブへの切り替えは何もしない。
+  // ここで何もせず素通りしないと、表示中のタブの display を一瞬 none→block と
+  // 再トグルしてしまい、直前にrenderHome()等で始まったCSSアニメーションがリセットされてズレる
+  if (state.currentTab === tab) return;
+
   // Replayで一時的にホームへ表示していた名言は、ホームタブを離れた時点で本来の表示に戻す
   if (state.currentTab === 'home' && tab !== 'home' && preReplayQuote !== null) {
     state.currentQuote = preReplayQuote;
@@ -1875,7 +1894,7 @@ function typewriterDuration(text, speed = TYPEWRITER_SPEED) {
 
 function revealMythicIfNeeded() {
   if (!dailyQuoteJustRevealed || !state.currentQuote || state.currentQuote.rarity !== 'mythic') return;
-  setTimeout(() => {
+  scheduleRevealTimer(() => {
     playMythicSound();
     const card = document.getElementById('quote-card');
     if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
@@ -2123,16 +2142,11 @@ function toggleFavorite(id) {
 }
 
 // ── タイプライター ────────────────────────────────────────
+// 文字を後から追加するのではなく、完成形の文章を最初からDOMに置いた上で
+// 1文字ずつ透明度を上げて見せる（カードの高さが最初から確定し、演出中にレイアウトが動かない）
 function typewriter(el, text, speed = TYPEWRITER_SPEED) {
-  if (typewriterTimer) clearInterval(typewriterTimer);
-  el.classList.add('typing');
-  el.textContent = '';
-  let i = 0;
-  typewriterTimer = setInterval(() => {
-    el.textContent += text[i];
-    i++;
-    if (i >= text.length) { clearInterval(typewriterTimer); typewriterTimer = null; el.classList.remove('typing'); }
-  }, speed);
+  const chars = Array.from(text);
+  el.innerHTML = chars.map((ch, i) => `<span style="animation-delay:${i * speed}ms">${escapeHtml(ch)}</span>`).join('');
 }
 
 // ── 効果音 ───────────────────────────────────────────────
