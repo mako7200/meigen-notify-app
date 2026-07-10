@@ -1,11 +1,16 @@
 'use strict';
 
 // iOSのホーム画面追加（standalone）時、window.innerHeightがステータスバー分だけ実際の画面より
-// 短く報告される不具合があるため、standalone時のみwindow.screen.height（実際の画面の高さ）を使う
+// 短く報告される不具合があるため、standalone時のみwindow.screen.height（実際の画面の高さ）を使う。
+// Safariの通常タブでは、アドレスバーの表示状態に応じて継続的に追従してくれるCSS標準のdvhの方が
+// JS計測値（resizeイベント頼みで更新が遅れうる）より信頼できるため、--real-vhを設定しない
 function updateRealViewportHeight() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  const h = isStandalone ? window.screen.height : window.innerHeight;
-  document.documentElement.style.setProperty('--real-vh', h + 'px');
+  if (isStandalone) {
+    document.documentElement.style.setProperty('--real-vh', window.screen.height + 'px');
+  } else {
+    document.documentElement.style.removeProperty('--real-vh');
+  }
 }
 updateRealViewportHeight();
 window.addEventListener('resize', updateRealViewportHeight);
