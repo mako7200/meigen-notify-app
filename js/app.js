@@ -617,7 +617,10 @@ const Storage = {
   saveSeasonalUnlocked(list) { localStorage.setItem('meigen_seasonal_unlocked', JSON.stringify(list)); },
   // 猫の懐き度 { total, todayDate, todayCount }
   getCatAffection() { const s = localStorage.getItem('meigen_cat_affection'); return s ? JSON.parse(s) : { total: 0, todayDate: '', todayCount: 0 }; },
-  saveCatAffection(a) { localStorage.setItem('meigen_cat_affection', JSON.stringify(a)); }
+  saveCatAffection(a) { localStorage.setItem('meigen_cat_affection', JSON.stringify(a)); },
+  // 猫の名前（未設定なら空文字）
+  getCatName() { return localStorage.getItem('meigen_cat_name') || ''; },
+  saveCatName(name) { localStorage.setItem('meigen_cat_name', name); }
 };
 
 // ── アプリ状態 ────────────────────────────────────────────
@@ -671,6 +674,7 @@ function init() {
   state.diary     = Storage.getDiary();
   state.seasonalUnlocked = Storage.getSeasonalUnlocked();
   state.catAffection = Storage.getCatAffection();
+  state.catName = Storage.getCatName();
   updateStreak();
   state.currentQuote = getDailyQuote();
   checkSeasonalThemeUnlocks();
@@ -690,6 +694,7 @@ function init() {
   initSplash();
   initInstallBanner();
   initCatWidget();
+  initCompanionToy();
   registerServiceWorker();
   checkMorningNotification();
 
@@ -1249,6 +1254,7 @@ function renderSettings() {
   document.getElementById('notif-toggle').checked = s.notificationEnabled;
   document.getElementById('notif-time').value = s.notificationTime;
   document.getElementById('cat-toggle').checked = s.catEnabled;
+  document.getElementById('cat-name-input').value = state.catName;
   renderThemeSwatches();
   updateAdminLockUI();
   renderCatAffectionUI();
@@ -1426,6 +1432,13 @@ function bindEvents() {
     updateCatVisibility();
   });
 
+  // 設定：猫の名前
+  document.getElementById('cat-name-input').addEventListener('change', e => {
+    state.catName = e.target.value.trim();
+    Storage.saveCatName(state.catName);
+    renderCatAffectionUI();
+  });
+
   // 設定：通知時間
   document.getElementById('notif-time').addEventListener('change', e => {
     state.settings.notificationTime = e.target.value;
@@ -1532,6 +1545,10 @@ function switchTab(tab) {
     requestAnimationFrame(renderList);
   }
   if (tab === 'settings') renderSettings();
+  if (tab === 'companion') {
+    if (repositionCompanionToy) requestAnimationFrame(repositionCompanionToy);
+    renderCompanionQuoteComment(Math.floor(state.catAffection.total / CAT_AFFECTION_PER_LEVEL) + 1); // タブに来るたびに一言を出し直す
+  }
 }
 
 function pinStickyToolbarSpacing(toolbar, section) {
@@ -1943,16 +1960,21 @@ let catActionTimer = null;
 let catState = 'sleeping';
 let catInputLockedUntil = 0; // 見た目は変わらない「無視」反応後も、一定時間タップを受け付けないようにするためのタイムスタンプ
 
+// ヘッダーの猫と相棒タブの猫は「同じ猫」として、常に同じ状態を表示する
+function getCatElements() {
+  return ['cat-widget', 'cat-widget-companion'].map(id => document.getElementById(id)).filter(Boolean);
+}
+
 function setCatState(nextState) {
-  const el = document.getElementById('cat-widget');
-  if (!el) return;
   catState = nextState;
-  el.src = CAT_IMG[nextState];
-  el.classList.remove(...CAT_NON_SLEEP_STATES);
-  if (nextState !== 'sleeping') {
-    void el.offsetWidth; // アニメーションを再生させるための強制リフロー
-    el.classList.add('cat-' + nextState);
-  }
+  getCatElements().forEach(el => {
+    el.src = CAT_IMG[nextState];
+    el.classList.remove(...CAT_NON_SLEEP_STATES);
+    if (nextState !== 'sleeping') {
+      void el.offsetWidth; // アニメーションを再生させるための強制リフロー
+      el.classList.add('cat-' + nextState);
+    }
+  });
 }
 
 // 気まぐれな寝姿バリエーション（あくび・毛づくろい・伸び）。管理者テスト表示からも呼び出せるよう共通化
@@ -1978,11 +2000,26 @@ function scheduleCatIdle() {
   const sleepTime = 8000 + Math.random() * 8000;
   catIdleTimer = setTimeout(() => {
     const roll = Math.random();
-    if (roll < 0.1) triggerCatIdleAction('yawn');
-    else if (roll < 0.15) triggerCatIdleAction('grooming');
-    else if (roll < 0.2) triggerCatIdleAction('stretching');
+    if (roll < 0.03) triggerCatHiding();
+    else if (roll < 0.13) triggerCatIdleAction('yawn');
+    else if (roll < 0.18) triggerCatIdleAction('grooming');
+    else if (roll < 0.23) triggerCatIdleAction('stretching');
     else scheduleCatIdle();
   }, sleepTime);
+}
+
+// 隠れんぼ（レア）：一瞬フェードアウトして消え、少ししてから戻ってくる
+function triggerCatHiding() {
+  const hideTime = 2200 + Math.random() * 2000;
+  catInputLockedUntil = Date.now() + hideTime + 200; // 消えている間はタップを受け付けない
+  getCatElements().forEach(el => el.classList.add('cat-hiding'));
+  // 猫がいなくなったら、吹き出しだけ残るのは不自然なので一緒に消す
+  clearTimeout(companionSpeechTimer);
+  document.getElementById('companion-speech-bubble')?.classList.remove('show');
+  catActionTimer = setTimeout(() => {
+    getCatElements().forEach(el => el.classList.remove('cat-hiding'));
+    scheduleCatIdle();
+  }, hideTime);
 }
 
 // タップへの反応。管理者テスト表示からも呼び出せるよう共通化
@@ -2021,8 +2058,8 @@ const CAT_TAP_REACTIONS = {
 };
 
 // タップ（3回に1回）への反応：無視55% / どこかへ行く30% / スローまばたき10% / ハート5%
-function reactToTap() {
-  const el = document.getElementById('cat-widget');
+// el はタップされた方の猫要素（ヘッダー／相棒タブ）。反応の演出はタップされた方にだけ表示する
+function reactToTap(el) {
   if (!state.settings.catEnabled || !el) return;
   clearTimeout(catIdleTimer);
   clearTimeout(catActionTimer);
@@ -2037,6 +2074,13 @@ function reactToTap() {
 const CAT_AFFECTION_DAILY_CAP = 10;
 const CAT_AFFECTION_PER_LEVEL = 20;
 
+// 今日まだ何pt獲得できる余地があるか（0なら上限に達している）
+function catAffectionRemainingToday() {
+  const today = new Date().toDateString();
+  if (state.catAffection.todayDate !== today) return CAT_AFFECTION_DAILY_CAP;
+  return CAT_AFFECTION_DAILY_CAP - state.catAffection.todayCount;
+}
+
 function gainCatAffection(amount) {
   const today = new Date().toDateString();
   if (state.catAffection.todayDate !== today) {
@@ -2049,35 +2093,134 @@ function gainCatAffection(amount) {
   state.catAffection.todayCount += grant;
   Storage.saveCatAffection(state.catAffection);
   renderCatAffectionUI();
+  spawnAffectionPop(grant);
+}
+
+// なつき度バッジのそばに「+1」をふわっと浮かせる（非表示タブ側は何もしない）
+function spawnAffectionPop(grant) {
+  ['', '-companion'].forEach(suffix => {
+    const badge = document.getElementById('cat-affection-lv' + suffix);
+    if (!badge) return;
+    const rect = badge.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return; // 非表示タブ（display:none）は飛ばす
+    const pop = document.createElement('div');
+    pop.className = 'affection-pop';
+    pop.textContent = `+${grant}`;
+    pop.style.left = (rect.left + rect.width / 2) + 'px';
+    pop.style.top = rect.top + 'px';
+    document.body.appendChild(pop);
+    setTimeout(() => pop.remove(), 1200);
+  });
+}
+
+// 設定タブ・相棒タブ、両方の懐き度表示を更新する
+// なつき度Lvに応じた称号
+const CAT_AFFECTION_TITLES = [
+  { minLevel: 15, title: '溺愛' },
+  { minLevel: 10, title: 'ベストフレンド' },
+  { minLevel: 6,  title: '甘えん坊' },
+  { minLevel: 3,  title: 'なかよし' },
+  { minLevel: 1,  title: '人見知り' }
+];
+
+function catAffectionTitle(level) {
+  return (CAT_AFFECTION_TITLES.find(t => level >= t.minLevel) || CAT_AFFECTION_TITLES[CAT_AFFECTION_TITLES.length - 1]).title;
+}
+
+function catDisplayName() {
+  return state.catName || '猫';
 }
 
 function renderCatAffectionUI() {
-  const levelEl = document.getElementById('cat-affection-level');
-  if (!levelEl) return;
   const level = Math.floor(state.catAffection.total / CAT_AFFECTION_PER_LEVEL) + 1;
   const intoLevel = state.catAffection.total % CAT_AFFECTION_PER_LEVEL;
-  levelEl.textContent = `Lv.${level}`;
-  document.getElementById('cat-affection-fill').style.width = (intoLevel / CAT_AFFECTION_PER_LEVEL * 100) + '%';
-  document.getElementById('cat-affection-count').textContent = `${intoLevel} / ${CAT_AFFECTION_PER_LEVEL}pt`;
+  const pct = (intoLevel / CAT_AFFECTION_PER_LEVEL * 100) + '%';
+  const countText = `${intoLevel} / ${CAT_AFFECTION_PER_LEVEL}pt`;
+  const lvText = `Lv.${level}`;
+  const rankText = catAffectionTitle(level);
+  const titleText = `${catDisplayName()}の懐き度`;
+
+  ['', '-companion'].forEach(suffix => {
+    const lvEl = document.getElementById('cat-affection-lv' + suffix);
+    if (!lvEl) return;
+    lvEl.textContent = lvText;
+    document.getElementById('cat-affection-rank' + suffix).textContent = rankText;
+    document.getElementById('cat-affection-fill' + suffix).style.width = pct;
+    document.getElementById('cat-affection-count' + suffix).textContent = countText;
+    const titleEl = document.getElementById('cat-affection-title' + suffix);
+    if (titleEl) titleEl.textContent = titleText;
+  });
+
+  renderCompanionQuoteComment(level);
 }
 
-// ハートが猫の上にふわっと浮かんで消える演出（ヘッダーのoverflow:hiddenで見切れないよう画面基準の固定配置にする）
+// カテゴリ別の一言（通常時）
+const CAT_CATEGORY_COMMENTS = {
+  historical: 'むかしの人はすごいニャ',
+  philosophy: 'なんだか難しい話だニャ',
+  business:   'やる気が出てきたニャ',
+  sports:     'ぼくも体を動かしたくなったニャ',
+  special:    'これは特別な感じがするニャ'
+};
+
+// レア度別の一言（レア以上を引いた日はこちらを優先）
+const CAT_RARITY_COMMENTS = {
+  rare:        'これはいいのを引いたニャ！',
+  super_rare:  'すごいの出たニャ！！',
+  ultra_rare:  'かなりレアなやつだニャ！！',
+  secret_rare: 'こんなの見たことないニャ！！！',
+  mythic:      'なにこれ…特別な力を感じるニャ…！'
+};
+
+const CAT_COMMENT_MIN_LEVEL = 2; // このLv.に達すると、今日の名言について一言つぶやくようになる
+
+function catQuoteComment(q) {
+  if (q.rarity && CAT_RARITY_COMMENTS[q.rarity]) return CAT_RARITY_COMMENTS[q.rarity];
+  return CAT_CATEGORY_COMMENTS[q.category] || '今日も一日がんばろうニャ';
+}
+
+// なつき度が一定を超えると、相棒タブで猫が今日の名言について一言つぶやく
+let companionSpeechTimer = null;
+
+// 吹き出しは喋った瞬間だけ表示し、しばらくしたら自然に消す（ずっと出しっぱなしだと不自然なため）
+function renderCompanionQuoteComment(level) {
+  const el = document.getElementById('companion-speech-bubble');
+  if (!el) return;
+  clearTimeout(companionSpeechTimer);
+  if (!state.settings.catEnabled || level < CAT_COMMENT_MIN_LEVEL || !state.currentQuote) {
+    el.classList.remove('show');
+    return;
+  }
+  el.textContent = catQuoteComment(state.currentQuote);
+  el.classList.add('show');
+  companionSpeechTimer = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+// ハートが猫の上にふわっと浮かんで消える演出（ヘッダー／相棒タブどちらの猫でも、サイズに合わせて大きさを変える）
 function spawnCatHeart(catEl) {
   const rect = catEl.getBoundingClientRect();
+  const size = Math.max(20, rect.width * 0.4);
   const heart = document.createElement('div');
   heart.className = 'cat-heart-pop';
-  heart.style.left = (rect.left + rect.width / 2 - 10) + 'px';
-  heart.style.top = (rect.top - 6) + 'px';
+  heart.style.width = size + 'px';
+  heart.style.height = size + 'px';
+  heart.style.left = (rect.left + rect.width / 2 - size / 2) + 'px';
+  heart.style.top = (rect.top - size * 0.3) + 'px';
   heart.innerHTML = '<svg viewBox="0 0 24 24" fill="#ff5c8a"><path d="M12 21s-6.7-4.3-9.5-8.4C.7 9.4 1.7 5.7 5 4.4c2-.8 4.2-.1 5.5 1.6C11.8 4.3 14 3.6 16 4.4c3.3 1.3 4.3 5 2.5 8.2C18.7 16.7 12 21 12 21z"/></svg>';
   document.body.appendChild(heart);
   setTimeout(() => heart.remove(), 1500);
 }
 
-// タップした瞬間に毎回出す波紋（猫が反応するかどうかに関係なく、タップが効いたことを伝える）
-function spawnCatTapRipple(catEl) {
+// タップした瞬間に毎回出す波紋（猫が反応するかどうかに関係なく、タップが効いたことを伝える。サイズは猫要素に合わせる）
+// isAffectionGain が true のときは、なつき度が実際に上がったタップだと分かるよう色を変える
+function spawnCatTapRipple(catEl, isAffectionGain) {
   const rect = catEl.getBoundingClientRect();
   const ripple = document.createElement('div');
-  ripple.className = 'cat-tap-ripple';
+  ripple.className = 'cat-tap-ripple' + (isAffectionGain ? ' affection-gain' : '');
+  ripple.style.width = rect.width + 'px';
+  ripple.style.height = rect.height + 'px';
+  ripple.style.marginLeft = (-rect.width / 2) + 'px';
+  ripple.style.marginTop = (-rect.height / 2) + 'px';
   ripple.style.left = (rect.left + rect.width / 2) + 'px';
   ripple.style.top = (rect.top + rect.height / 2) + 'px';
   document.body.appendChild(ripple);
@@ -2093,7 +2236,8 @@ const COMPANION_TEST_ACTIONS = [
   { key: 'heart',      label: 'ハート' },
   { key: 'yawn',       label: 'あくび' },
   { key: 'grooming',   label: '毛づくろい' },
-  { key: 'stretching', label: '伸び' }
+  { key: 'stretching', label: '伸び' },
+  { key: 'hiding',     label: '隠れんぼ' }
 ];
 
 function renderCompanionTestRow() {
@@ -2113,44 +2257,126 @@ function renderCompanionTestRow() {
 }
 
 function testCompanionAction(key) {
-  const el = document.getElementById('cat-widget');
-  if (!state.isAdmin || !state.settings.catEnabled || !el) return;
+  const els = getCatElements();
+  if (!state.isAdmin || !state.settings.catEnabled || els.length === 0) return;
   clearTimeout(catIdleTimer);
   clearTimeout(catActionTimer);
-  if (CAT_TAP_REACTIONS[key]) CAT_TAP_REACTIONS[key](el);
+  if (key === 'hiding') triggerCatHiding();
+  else if (CAT_TAP_REACTIONS[key]) els.forEach(el => CAT_TAP_REACTIONS[key](el));
   else if (CAT_IDLE_ACTIONS[key]) triggerCatIdleAction(key);
 }
 
 // 設定の「猫の表示」トグルに応じて表示/非表示を切り替える
 function updateCatVisibility() {
-  const el = document.getElementById('cat-widget');
-  if (!el) return;
+  const els = getCatElements();
+  if (els.length === 0) return;
+  const toy = document.getElementById('companion-toy');
   if (state.settings.catEnabled) {
-    el.classList.remove('hidden');
+    els.forEach(el => el.classList.remove('hidden'));
+    if (toy) toy.classList.remove('hidden');
     scheduleCatIdle();
   } else {
-    el.classList.add('hidden');
+    els.forEach(el => el.classList.add('hidden'));
+    if (toy) toy.classList.add('hidden');
     clearTimeout(catIdleTimer);
     clearTimeout(catActionTimer);
+    clearTimeout(companionSpeechTimer);
+    document.getElementById('companion-speech-bubble')?.classList.remove('show');
   }
 }
 
 let catTapCount = 0;
 
-function initCatWidget() {
-  const el = document.getElementById('cat-widget');
-  if (!el) return;
-  // 目を開けている（起きている/あくび中）ときは連打防止のためタップを無視する
-  // 眠っている時も3回タップに1回だけ起こす（毎回起こすと猫がかわいそうなため）
+// 目を開けている（起きている/あくび中）ときは連打防止のためタップを無視する
+// 眠っている時も3回タップに1回だけ起こす（毎回起こすと猫がかわいそうなため）
+// ヘッダー／相棒タブのどちらをタップしても同じ猫として扱い、カウントを共有する
+function bindCatTapHandler(el) {
   el.addEventListener('click', () => {
     if (catState !== 'sleeping' || Date.now() < catInputLockedUntil) return; // 反応中・クールダウン中のタップは受け付けないため、波紋も出さない
-    spawnCatTapRipple(el); // タップが受け付けられたことが毎回わかるよう波紋を出す
+    const willGainAffection = catTapCount + 1 >= 3 && catAffectionRemainingToday() > 0;
+    spawnCatTapRipple(el, willGainAffection); // タップが受け付けられたことが毎回わかるよう波紋を出す。実際になつき度が上がるタップだけ色を変える
     catTapCount++;
     if (catTapCount < 3) return;
     catTapCount = 0;
-    reactToTap();
+    reactToTap(el);
   });
+}
+
+function initCatWidget() {
+  const els = getCatElements();
+  if (els.length === 0) return;
+  els.forEach(bindCatTapHandler);
   updateCatVisibility();
+}
+
+// ── じゃらし遊び（相棒タブ限定）：おもちゃをドラッグして猫に近づけると反応する ──
+let toyDragging = false;
+let toyPounceLockedUntil = 0;
+let toyPositioned = false; // 初期配置は「相棒タブが実際に表示された最初の1回」だけ行う
+let repositionCompanionToy = null;
+
+function initCompanionToy() {
+  const toy = document.getElementById('companion-toy');
+  const stage = document.querySelector('#tab-companion .companion-screen');
+  const catEl = document.getElementById('cat-widget-companion');
+  if (!toy || !stage || !catEl) return;
+
+  function setToyPosition(x, y, skipReaction) {
+    const rect = stage.getBoundingClientRect();
+    const clampedX = Math.max(20, Math.min(rect.width - 20, x));
+    const clampedY = Math.max(20, Math.min(rect.height - 20, y));
+    toy.style.left = clampedX + 'px';
+    toy.style.top = clampedY + 'px';
+    if (!skipReaction) checkToyProximity();
+  }
+
+  function checkToyProximity() {
+    const catRect = catEl.getBoundingClientRect();
+    const toyRect = toy.getBoundingClientRect();
+    const dx = (catRect.left + catRect.width / 2) - (toyRect.left + toyRect.width / 2);
+    const dy = (catRect.top + catRect.height / 2) - (toyRect.top + toyRect.height / 2);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const canReact = Date.now() >= toyPounceLockedUntil && Date.now() >= catInputLockedUntil
+      && !catEl.classList.contains('cat-hiding') && !catEl.classList.contains('away');
+    if (dist < 90 && canReact) pounceOnToy();
+  }
+
+  function pounceOnToy() {
+    toyPounceLockedUntil = Date.now() + 4000; // 連発で反応し続けないためのクールダウン
+    clearTimeout(catIdleTimer);
+    clearTimeout(catActionTimer);
+    setCatState('awake');
+    void catEl.offsetWidth; // アニメーションを再生させるための強制リフロー
+    catEl.classList.add('cat-pounce');
+    gainCatAffection(1);
+    catActionTimer = setTimeout(() => {
+      catEl.classList.remove('cat-pounce');
+      scheduleCatIdle();
+    }, 900);
+  }
+
+  toy.addEventListener('pointerdown', e => {
+    toyDragging = true;
+    toy.setPointerCapture(e.pointerId);
+  });
+  toy.addEventListener('pointermove', e => {
+    if (!toyDragging) return;
+    const rect = stage.getBoundingClientRect();
+    setToyPosition(e.clientX - rect.left, e.clientY - rect.top);
+  });
+  toy.addEventListener('pointerup', () => { toyDragging = false; });
+  toy.addEventListener('pointercancel', () => { toyDragging = false; });
+
+  // 初期位置：右下あたりに置いておく。相棒タブがまだ非表示（display:none）だと
+  // サイズが測れないため、実際にタブが表示されたタイミング（switchTab）で改めて呼び出す
+  repositionCompanionToy = () => {
+    if (toyPositioned) return;
+    const rect = stage.getBoundingClientRect();
+    if (rect.width === 0) return;
+    toyPositioned = true;
+    setToyPosition(rect.width - 50, rect.height - 50, true);
+  };
+  requestAnimationFrame(repositionCompanionToy);
 }
 
 // ── お気に入り ────────────────────────────────────────────

@@ -139,11 +139,30 @@
     <!-- 相棒タブ -->
     <section id="tab-companion" class="tab-section">
       <div class="companion-screen">
-        <div class="companion-mark">
-          <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.6-9.7-9.4C.9 7.8 2.3 4.5 5.4 3.6c2-.6 4 .2 5.1 1.9l1.5 2.2 1.5-2.2c1.1-1.7 3.1-2.5 5.1-1.9 3.1.9 4.5 4.2 3.1 7.5C19.5 15.9 12 20.5 12 20.5z"/></svg>
+        <div class="companion-speech" id="companion-speech-bubble"></div>
+        <img id="cat-widget-companion" class="cat-widget-companion" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
+        <div class="companion-affection">
+          <div class="affection-header">
+            <div>
+              <div class="settings-label" id="cat-affection-title-companion">猫の懐き度</div>
+              <div class="settings-sublabel">猫をタップして仲良くなろう</div>
+            </div>
+            <span class="affection-level-group">
+              <span class="affection-lv" id="cat-affection-lv-companion">Lv.1</span>
+              <span class="affection-rank-badge" id="cat-affection-rank-companion"></span>
+            </span>
+          </div>
+          <div class="affection-track">
+            <div class="affection-fill" id="cat-affection-fill-companion" style="width:0%"></div>
+          </div>
+          <div class="affection-count" id="cat-affection-count-companion">0 / 20pt</div>
         </div>
-        <div class="companion-soon">Coming Soon</div>
-        <p class="companion-jp">準備中です</p>
+        <div class="companion-toy" id="companion-toy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#F0C878" stroke-width="1.5" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M4 9c4 2 12 2 16 0M4 15c4-2 12-2 16 0M8 4c2 4 2 12 0 16M16 4c-2 4-2 12 0 16"/>
+          </svg>
+        </div>
       </div>
     </section>
 
@@ -219,20 +238,30 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">猫の表示</div>
-            <div class="settings-sublabel">ヘッダー右端に常駐する猫を表示します</div>
+            <div class="settings-sublabel">ヘッダーと相棒タブに猫を表示します</div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="cat-toggle">
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">名前</div>
+            <div class="settings-sublabel">名前を付けると、懐き度表示などに反映されます</div>
+          </div>
+          <input type="text" class="cat-name-input" id="cat-name-input" placeholder="名前を付ける" maxlength="10">
+        </div>
         <div class="settings-row-affection">
           <div class="affection-header">
             <div>
-              <div class="settings-label">猫の懐き度</div>
+              <div class="settings-label" id="cat-affection-title">猫の懐き度</div>
               <div class="settings-sublabel">猫をタップして仲良くなろう</div>
             </div>
-            <span class="affection-level" id="cat-affection-level">Lv.1</span>
+            <span class="affection-level-group">
+              <span class="affection-lv" id="cat-affection-lv">Lv.1</span>
+              <span class="affection-rank-badge" id="cat-affection-rank"></span>
+            </span>
           </div>
           <div class="affection-track">
             <div class="affection-fill" id="cat-affection-fill" style="width:0%"></div>
@@ -270,7 +299,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.23.3</div>
+            <div class="settings-sublabel">Version 2.24.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認

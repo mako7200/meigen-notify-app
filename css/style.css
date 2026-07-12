@@ -220,6 +220,7 @@ main {
 }
 
 .companion-screen {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -228,35 +229,103 @@ main {
   gap: 18px;
 }
 
-.companion-mark {
-  width: 64px;
-  height: 64px;
+.cat-widget-companion {
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  border: 1.5px solid rgba(240, 200, 120, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-light);
+  image-rendering: pixelated;
+  cursor: pointer;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+  transition: transform 0.6s ease, opacity 0.6s ease;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
-.companion-mark svg {
-  width: 28px;
-  height: 28px;
+.cat-widget-companion.hidden {
+  display: none;
 }
 
-.companion-soon {
-  font-size: 0.68rem;
+.cat-widget-companion.away {
+  transform: scale(0.7) translateY(20px);
+  opacity: 0;
+}
+
+.cat-widget-companion.cat-slow-blink {
+  animation: catSlowBlinkGlow 1.8s ease-in-out;
+}
+
+.cat-widget-companion.cat-pounce {
+  animation: catPounce 0.4s ease-out;
+}
+
+@keyframes catPounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.12) rotate(-4deg); }
+  60%  { transform: scale(0.95) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* じゃらし（おもちゃ）：ドラッグして猫に近づけると反応する */
+.companion-toy {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  cursor: grab;
+  touch-action: none;
+  z-index: 5;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+.companion-toy:active {
+  cursor: grabbing;
+}
+
+.companion-toy.hidden {
+  display: none;
+}
+
+.companion-toy svg {
+  width: 100%;
+  height: 100%;
+}
+
+.companion-affection {
+  width: 100%;
+  max-width: 280px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+}
+
+/* 猫が今日の名言について一言つぶやく吹き出し（なつき度が一定を超えると表示） */
+.companion-speech {
+  display: none;
+  position: relative;
+  background: rgba(255, 255, 255, 0.92);
+  color: #3a2a1a;
+  font-size: 0.8rem;
   font-weight: bold;
-  letter-spacing: 0.28em;
-  color: var(--primary-light);
-  text-transform: uppercase;
+  padding: 10px 16px;
+  border-radius: 14px;
+  max-width: 260px;
+  text-align: center;
+  line-height: 1.5;
 }
 
-.companion-jp {
-  font-size: 0.85rem;
-  color: rgba(255, 248, 230, 0.7);
-  text-align: center;
-  line-height: 1.8;
+.companion-speech.show {
+  display: block;
+}
+
+.companion-speech::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  border-width: 8px 6px 0;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.92) transparent transparent;
 }
 
 #tab-home #home-quote-area {
@@ -1250,7 +1319,8 @@ main {
   display: none;
 }
 
-.cat-widget.cat-awake, .cat-widget.cat-yawn, .cat-widget.cat-grooming, .cat-widget.cat-stretching {
+.cat-widget.cat-awake, .cat-widget.cat-yawn, .cat-widget.cat-grooming, .cat-widget.cat-stretching,
+.cat-widget-companion.cat-awake, .cat-widget-companion.cat-yawn, .cat-widget-companion.cat-grooming, .cat-widget-companion.cat-stretching {
   animation: catEyeFade 0.25s ease-out;
 }
 
@@ -1261,6 +1331,10 @@ main {
 
 .cat-widget.away {
   transform: translateY(-50%) translateX(70px);
+  opacity: 0;
+}
+
+.cat-widget.cat-hiding, .cat-widget-companion.cat-hiding {
   opacity: 0;
 }
 
@@ -1305,6 +1379,11 @@ main {
   pointer-events: none;
   z-index: 150;
   animation: catTapRippleAnim 0.5s ease-out forwards;
+}
+
+/* なつき度が実際に上がったタップだけ、ハートと同じ色に変えて分かるようにする */
+.cat-tap-ripple.affection-gain {
+  border-color: rgba(255, 92, 138, 0.85);
 }
 
 @keyframes catTapRippleAnim {
@@ -1595,11 +1674,48 @@ details[open] > .accordion-summary .accordion-caret {
   margin-bottom: 8px;
 }
 
-.affection-level {
+.affection-level-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.affection-lv {
   font-size: 0.78rem;
   font-weight: bold;
   color: var(--primary-light);
-  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.affection-rank-badge {
+  font-size: 0.68rem;
+  font-weight: bold;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, rgba(255, 143, 171, 0.22), rgba(255, 92, 138, 0.22));
+  border: 1px solid rgba(255, 92, 138, 0.6);
+  color: #ffb0cb;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* なつき度が上がった瞬間に「+1」がふわっと浮かんで消える演出 */
+.affection-pop {
+  position: fixed;
+  transform: translate(-50%, 0);
+  color: #ff5c8a;
+  font-weight: bold;
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 250;
+  animation: affectionPopFloat 1.1s ease-out forwards;
+}
+
+@keyframes affectionPopFloat {
+  0%   { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
+  15%  { opacity: 1; transform: translate(-50%, -6px) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
 }
 
 .affection-track {
@@ -1781,6 +1897,19 @@ details[open] > .accordion-summary .accordion-caret {
 }
 
 .time-input:focus { border-color: var(--primary); }
+
+.cat-name-input {
+  padding: 8px 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: rgba(255, 248, 230, 0.95);
+  background: rgba(0, 0, 0, 0.25);
+  width: 110px;
+  outline: none;
+}
+
+.cat-name-input:focus { border-color: var(--primary); }
 
 .notification-note {
   font-size: 0.78rem;
