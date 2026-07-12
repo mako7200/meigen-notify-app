@@ -65,7 +65,9 @@ html, body {
   height: 100dvh;
   height: var(--real-vh, 100dvh); /* iOS standalone時のvh/dvhのズレをJS計測値で補正 */
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
-  background: var(--bg);
+  /* Safariはhtml/bodyの背景色を直接参照してステータスバー・ツールバーの色を決めるため、
+     #app以下の見た目（濃紺）に合わせてここも濃紺にする（クリーム色のままだと白い余白に見える） */
+  background: #0a0820;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
@@ -2221,6 +2223,56 @@ html[data-theme="snow"] .snow-layer {
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* 着せ替え解放バナー */
+.costume-unlock-banner {
+  position: fixed;
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + 10px);
+  left: 50%;
+  width: calc(100% - 32px);
+  max-width: 448px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #1a0f38, #2a1a4a);
+  border: 1px solid rgba(240, 200, 120, 0.5);
+  border-radius: 16px;
+  padding: 10px 16px;
+  box-shadow: 0 0 24px rgba(240, 200, 120, 0.3), 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -140%);
+  transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.3s;
+  z-index: 300;
+}
+
+.costume-unlock-banner.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.costume-unlock-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 1.5px solid var(--primary-light);
+  box-shadow: 0 0 14px rgba(240, 200, 120, 0.4);
+  flex-shrink: 0;
+}
+
+.costume-unlock-text .costume-unlock-label {
+  font-size: 0.65rem;
+  color: rgba(255, 248, 230, 0.7);
+  letter-spacing: 0.1em;
+}
+
+.costume-unlock-text .costume-unlock-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--primary-light);
 }
 
 /* インストールバナー */

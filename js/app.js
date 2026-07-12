@@ -938,11 +938,13 @@ function performBonusClaim() {
     showToast(`条件のレア度を集め尽くしていたため、代わりに${bonusQuotes.length}枚解放しました`);
   }
   if (bonusQuote.rarity === 'mythic') {
+    const burstDelay = typewriterDuration(bonusQuote.text) + 2100; // レア度演出（+2秒後）が反映された後に鳴らす
     scheduleRevealTimer(() => {
       playMythicSound();
       const quoteCard = document.getElementById('quote-card');
       if (quoteCard) spawnMythicBurst(quoteCard, bonusQuote.themeColors);
-    }, typewriterDuration(bonusQuote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
+    }, burstDelay);
+    scheduleRevealTimer(() => announceCostumeUnlockIfNeeded(bonusQuote), burstDelay + 1900); // 光の演出が収まってから通知
   }
 }
 
@@ -1039,7 +1041,7 @@ function scheduleCardDetailsReveal(q) {
   const base = typewriterDuration(q.text);
   scheduleRevealTimer(() => revealCardAuthor(q), base + 2000);
   scheduleRevealTimer(() => revealCardBadge(), base + 3000);
-  scheduleRevealTimer(() => revealCardDetailButton(), base + 5000);
+  scheduleRevealTimer(() => revealCardDetailButton(), base + 4000);
 }
 
 function revealCardAuthor(q) {
@@ -1899,11 +1901,32 @@ function typewriterDuration(text, speed = TYPEWRITER_SPEED) {
 
 function revealMythicIfNeeded() {
   if (!dailyQuoteJustRevealed || !state.currentQuote || state.currentQuote.rarity !== 'mythic') return;
+  const quote = state.currentQuote;
+  const burstDelay = typewriterDuration(quote.text) + 2100; // レア度演出（+2秒後）が反映された後に鳴らす
   scheduleRevealTimer(() => {
     playMythicSound();
     const card = document.getElementById('quote-card');
-    if (card) spawnMythicBurst(card, state.currentQuote.themeColors);
-  }, typewriterDuration(state.currentQuote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
+    if (card) spawnMythicBurst(card, quote.themeColors);
+  }, burstDelay);
+  scheduleRevealTimer(() => announceCostumeUnlockIfNeeded(quote), burstDelay + 1900); // 光の演出が収まってから通知
+}
+
+// 名言のidに紐づく着せ替えテーマがあれば、解放バナーを表示する
+function announceCostumeUnlockIfNeeded(quote) {
+  const theme = Object.values(THEMES).find(t => t.unlockId === quote.id);
+  if (theme) showCostumeUnlockBanner(theme);
+}
+
+let costumeUnlockBannerTimer = null;
+
+function showCostumeUnlockBanner(theme) {
+  const banner = document.getElementById('costume-unlock-banner');
+  if (!banner) return;
+  document.getElementById('costume-unlock-icon').style.backgroundImage = theme.icon ? `url('${theme.icon}')` : '';
+  document.getElementById('costume-unlock-title').textContent = theme.label;
+  banner.classList.add('show');
+  clearTimeout(costumeUnlockBannerTimer);
+  costumeUnlockBannerTimer = setTimeout(() => banner.classList.remove('show'), 3200);
 }
 
 // ── 猫ウィジェット ────────────────────────────────────────
