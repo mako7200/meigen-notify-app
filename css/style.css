@@ -71,6 +71,9 @@ html, body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
+  /* X/LINEのように外枠は固定し、スクロールはmain内だけで完結させる（引っ張って外枠ごと動くのを防ぐ） */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 main.no-scroll {
@@ -165,6 +168,7 @@ main {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-y: contain; /* main内で引っ張った勢いが外枠(html/body)に伝わって一緒に動くのを防ぐ */
   padding-bottom: 8px;
   background: transparent;
 }
