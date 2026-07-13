@@ -40,7 +40,7 @@
     <div class="header-title">
       <span id="header-title-text">ホーム</span>
     </div>
-    <img id="cat-widget" class="cat-widget" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
+    <div id="cat-widget" class="cat-widget"></div>
   </header>
 
   <!-- 更新バナー -->
@@ -139,23 +139,45 @@
     <!-- 相棒タブ -->
     <section id="tab-companion" class="tab-section">
       <div class="companion-screen">
+        <div class="companion-settings-dropdown sort-dropdown" id="companion-settings-dropdown">
+          <button class="companion-settings-btn sort-dropdown-btn" id="companion-settings-btn" aria-label="相棒の見た目を設定">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+          <div class="companion-settings-menu sort-dropdown-menu">
+            <button class="diary-close-btn" id="companion-settings-close-btn" aria-label="閉じる">✕</button>
+            <div class="companion-settings-title">枠の色</div>
+            <div class="theme-swatch-list companion-quick-swatch-list" id="ring-swatch-list-companion"></div>
+            <div class="companion-settings-title">相棒の色</div>
+            <div class="theme-swatch-list companion-quick-swatch-list" id="cat-color-swatch-list-companion"></div>
+          </div>
+        </div>
+        <div class="companion-affection-compact">
+          <span class="affection-lv" id="cat-affection-lv-companion">Lv.1</span>
+          <span class="affection-rank-badge" id="cat-affection-rank-companion"></span>
+          <div class="affection-track"><div class="affection-fill" id="cat-affection-fill-companion" style="width:0%"></div></div>
+          <span class="affection-count" id="cat-affection-count-companion">0/20</span>
+        </div>
         <div class="companion-speech" id="companion-speech-bubble"></div>
-        <img id="cat-widget-companion" class="cat-widget-companion" src="images/animals/cat_sleeping_dot_transparent.png" alt="">
-        <div class="companion-affection">
-          <div class="affection-header">
-            <div>
-              <div class="settings-label" id="cat-affection-title-companion">猫の懐き度</div>
-              <div class="settings-sublabel">猫をタップして仲良くなろう</div>
+        <div class="cat-stage-companion">
+          <div id="cat-widget-companion" class="cat-widget-companion"></div>
+          <span class="journey-frame-ring" id="journey-frame-ring-companion"></span>
+        </div>
+        <div class="journey-card">
+          <div class="journey-top">
+            <span class="journey-badge">旅の記録</span>
+            <span class="journey-count" id="journey-count">0<span class="slash">/</span>30歩</span>
+          </div>
+          <div class="journey-line-wrap">
+            <div class="journey-line">
+              <div class="journey-line-fill" id="journey-line-fill" style="width:0%"></div>
+              <span class="journey-dot milestone" id="journey-milestone-10" style="left:33.3%"></span>
+              <span class="journey-dot milestone" id="journey-milestone-20" style="left:66.6%"></span>
+              <span class="journey-dot milestone" id="journey-milestone-30" style="left:100%"></span>
+              <span class="journey-current" id="journey-current" style="left:0%"></span>
             </div>
-            <span class="affection-level-group">
-              <span class="affection-lv" id="cat-affection-lv-companion">Lv.1</span>
-              <span class="affection-rank-badge" id="cat-affection-rank-companion"></span>
-            </span>
           </div>
-          <div class="affection-track">
-            <div class="affection-fill" id="cat-affection-fill-companion" style="width:0%"></div>
-          </div>
-          <div class="affection-count" id="cat-affection-count-companion">0 / 20pt</div>
+          <button class="quiz-start-btn" id="quiz-start-btn">クイズに挑戦する</button>
+          <div class="journey-loops" id="journey-loops"></div>
         </div>
         <div class="companion-toy" id="companion-toy">
           <svg viewBox="0 0 24 24" fill="none" stroke="#F0C878" stroke-width="1.5" stroke-linecap="round">
@@ -237,8 +259,8 @@
         </summary>
         <div class="settings-row">
           <div>
-            <div class="settings-label">猫の表示</div>
-            <div class="settings-sublabel">ヘッダーと相棒タブに猫を表示します</div>
+            <div class="settings-label">相棒の表示</div>
+            <div class="settings-sublabel">ヘッダーと相棒タブに相棒を表示します</div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="cat-toggle">
@@ -255,8 +277,8 @@
         <div class="settings-row-affection">
           <div class="affection-header">
             <div>
-              <div class="settings-label" id="cat-affection-title">猫の懐き度</div>
-              <div class="settings-sublabel">猫をタップして仲良くなろう</div>
+              <div class="settings-label" id="cat-affection-title">相棒の懐き度</div>
+              <div class="settings-sublabel">相棒をタップして仲良くなろう</div>
             </div>
             <span class="affection-level-group">
               <span class="affection-lv" id="cat-affection-lv">Lv.1</span>
@@ -267,6 +289,14 @@
             <div class="affection-fill" id="cat-affection-fill" style="width:0%"></div>
           </div>
           <div class="affection-count" id="cat-affection-count">0 / 20pt</div>
+        </div>
+        <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="settings-label">枠の色</div>
+          <div class="theme-swatch-list" id="ring-swatch-list"></div>
+        </div>
+        <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="settings-label">相棒の色</div>
+          <div class="theme-swatch-list" id="cat-color-swatch-list"></div>
         </div>
         <div class="settings-row-test" id="companion-test-row" style="display:none;">
           <div class="settings-label">反応テスト（管理者用）</div>
@@ -299,7 +329,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.24.0</div>
+            <div class="settings-sublabel">Version 2.25.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -466,8 +496,25 @@
     <div class="login-modal-current" id="login-modal-current"></div>
     <div id="login-modal-rows"></div>
     <div class="login-modal-cat-row" id="login-modal-cat-row">
-      <img class="login-modal-cat" id="login-modal-cat-img" src="images/animals/cat_awake_dot_transparent.png" alt="">
+      <div class="login-modal-cat" id="login-modal-cat-img"></div>
       <div class="login-modal-speech" id="login-modal-cat-speech">明日もログインするニャ</div>
+    </div>
+  </div>
+</div>
+
+<!-- 名言クイズモーダル -->
+<div class="modal-overlay centered-modal" id="quiz-modal-overlay">
+  <div class="modal centered-modal-box quiz-modal-box">
+    <button class="diary-close-btn" id="quiz-close-x-btn">✕</button>
+    <div class="modal-title">名言クイズ</div>
+    <div class="quiz-progress" id="quiz-progress"></div>
+    <div class="quiz-quote" id="quiz-quote-text"></div>
+    <div class="quiz-question" id="quiz-question-text"></div>
+    <div class="quiz-choices" id="quiz-choices"></div>
+    <div id="quiz-result" style="display:none;">
+      <div class="quiz-result-title" id="quiz-result-title"></div>
+      <div class="quiz-result-detail" id="quiz-result-detail"></div>
+      <button class="quiz-close-btn" id="quiz-close-btn">閉じる</button>
     </div>
   </div>
 </div>
@@ -487,10 +534,12 @@
     <div class="detail-info-block" id="detail-bio-block" style="display:none">
       <div class="detail-info-title">この人物について</div>
       <p class="detail-info-text" id="detail-bio-text"></p>
+      <span class="detail-info-toggle" id="detail-bio-toggle">続きを読む</span>
     </div>
     <div class="detail-info-block" id="detail-background-block" style="display:none">
       <div class="detail-info-title">この名言について</div>
       <p class="detail-info-text" id="detail-background-text"></p>
+      <span class="detail-info-toggle" id="detail-background-toggle">続きを読む</span>
     </div>
     <div class="form-group" style="margin-top:20px">
       <label class="form-label">コメント</label>

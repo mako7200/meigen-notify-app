@@ -620,7 +620,22 @@ const Storage = {
   saveCatAffection(a) { localStorage.setItem('meigen_cat_affection', JSON.stringify(a)); },
   // 猫の名前（未設定なら空文字）
   getCatName() { return localStorage.getItem('meigen_cat_name') || ''; },
-  saveCatName(name) { localStorage.setItem('meigen_cat_name', name); }
+  saveCatName(name) { localStorage.setItem('meigen_cat_name', name); },
+  // 旅マップ { steps, loops, bestTier }
+  getJourney() { const s = localStorage.getItem('meigen_journey'); return s ? JSON.parse(s) : { steps: 0, loops: 0, bestTier: 0 }; },
+  saveJourney(j) { localStorage.setItem('meigen_journey', JSON.stringify(j)); },
+  // クイズの生涯成績 { correct, total }
+  getQuizStats() { const s = localStorage.getItem('meigen_quiz_stats'); return s ? JSON.parse(s) : { correct: 0, total: 0 }; },
+  saveQuizStats(s) { localStorage.setItem('meigen_quiz_stats', JSON.stringify(s)); },
+  // 旅の枠の色（未設定＝nullなら、解放済みの最高ランクを自動表示）
+  getJourneyRingChoice() { return localStorage.getItem('meigen_journey_ring_choice') || null; },
+  saveJourneyRingChoice(key) {
+    if (key === null) localStorage.removeItem('meigen_journey_ring_choice');
+    else localStorage.setItem('meigen_journey_ring_choice', key);
+  },
+  // 猫の色（未設定なら白＝デフォルト）
+  getCatColor() { return localStorage.getItem('meigen_cat_color') || 'white'; },
+  saveCatColor(key) { localStorage.setItem('meigen_cat_color', key); }
 };
 
 // ── アプリ状態 ────────────────────────────────────────────
@@ -675,6 +690,10 @@ function init() {
   state.seasonalUnlocked = Storage.getSeasonalUnlocked();
   state.catAffection = Storage.getCatAffection();
   state.catName = Storage.getCatName();
+  state.journey = Storage.getJourney();
+  state.quizStats = Storage.getQuizStats();
+  state.journeyRingChoice = Storage.getJourneyRingChoice();
+  state.catColor = Storage.getCatColor();
   updateStreak();
   state.currentQuote = getDailyQuote();
   checkSeasonalThemeUnlocks();
@@ -693,8 +712,11 @@ function init() {
   bindEvents();
   initSplash();
   initInstallBanner();
+  applyCatColor();
   initCatWidget();
   initCompanionToy();
+  initQuiz();
+  renderJourney();
   registerServiceWorker();
   checkMorningNotification();
 
@@ -911,11 +933,11 @@ function openLoginModal() {
   // 起きて挨拶した後、3秒経ったら眠りにつく
   const catImg = document.getElementById('login-modal-cat-img');
   const catSpeech = document.getElementById('login-modal-cat-speech');
-  catImg.src = CAT_IMG.awake;
+  setCatMaskImage(catImg, CAT_IMG.awake);
   catSpeech.textContent = '明日もログインするニャ';
   clearTimeout(loginModalCatTimer);
   loginModalCatTimer = setTimeout(() => {
-    catImg.src = CAT_IMG.sleeping;
+    setCatMaskImage(catImg, CAT_IMG.sleeping);
     catSpeech.textContent = 'zzz';
   }, 3000);
 
@@ -1192,6 +1214,9 @@ function updateAdminLockUI() {
 
   renderCompanionTestRow();
   renderThemeSwatches();
+  renderRingSwatches();
+  renderCatColorSwatches();
+  if (state.currentTab === 'companion') requestAnimationFrame(layoutCompanionPanel);
 }
 
 function toggleAdminLock() {
@@ -1205,6 +1230,22 @@ function toggleAdminLock() {
       applyTheme(state.settings.theme);
       renderThemeSwatches();
       message = '管理者モードを終了しました（未解放のテーマだったため表示を元に戻しました）';
+    }
+    // 管理者モード中に本来未解放の猫の色を選んでいた場合は、解除と同時に元に戻す
+    if (!isCatColorUnlocked(state.catColor)) {
+      state.catColor = 'white';
+      Storage.saveCatColor(state.catColor);
+      applyCatColor();
+      renderCatColorSwatches();
+      message = '管理者モードを終了しました（未解放の相棒の色だったため表示を元に戻しました）';
+    }
+    // 管理者モード中に本来未解放の枠の色を選んでいた場合は、解除と同時に元に戻す（自動選択に戻す）
+    const chosenRing = RING_CHOICE_OPTIONS.find(o => o.key === state.journeyRingChoice);
+    if (chosenRing && !isRingTierUnlocked(chosenRing.tier)) {
+      state.journeyRingChoice = null;
+      Storage.saveJourneyRingChoice(null);
+      renderJourney();
+      message = '管理者モードを終了しました（未解放の枠の色だったため表示を元に戻しました）';
     }
     // 管理者モード中にホームでプレビュー表示していた場合は、本来の表示に戻す
     if (preAdminPreviewQuote !== null) {
@@ -1266,6 +1307,10 @@ function bindEvents() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
+
+  // 名言詳細：「この人物について」「この名言について」の続きを読む
+  bindExpandableToggle('detail-bio-text', 'detail-bio-toggle');
+  bindExpandableToggle('detail-background-text', 'detail-background-toggle');
 
   // 一覧：検索
   document.getElementById('list-search').addEventListener('input', e => {
@@ -1460,6 +1505,52 @@ function bindEvents() {
     showToast(`テーマを「${THEMES[key].label}」に変更しました`);
   });
 
+  // 相棒：枠の色（設定タブ・相棒タブのクイック設定、両方から同じ処理を使う）
+  function handleRingSwatchClick(e) {
+    const swatch = e.target.closest('.theme-swatch');
+    if (!swatch) return;
+    e.stopPropagation(); // クイック設定パネルは選ぶたびに閉じず、色を見比べやすくする
+    const key = swatch.dataset.ring;
+    const opt = RING_CHOICE_OPTIONS.find(o => o.key === key);
+    if (!opt || !isRingTierUnlocked(opt.tier)) { showToast('まだ解放されていない色です'); return; }
+    state.journeyRingChoice = key;
+    Storage.saveJourneyRingChoice(key);
+    renderJourney();
+    showToast(`枠の色を「${opt.label}」に変更しました`);
+  }
+  document.getElementById('ring-swatch-list').addEventListener('click', handleRingSwatchClick);
+  document.getElementById('ring-swatch-list-companion').addEventListener('click', handleRingSwatchClick);
+
+  // 相棒：猫の色（設定タブ・相棒タブのクイック設定、両方から同じ処理を使う）
+  function handleCatColorSwatchClick(e) {
+    const swatch = e.target.closest('.theme-swatch');
+    if (!swatch) return;
+    e.stopPropagation(); // クイック設定パネルは選ぶたびに閉じず、色を見比べやすくする
+    const key = swatch.dataset.catColor;
+    if (!isCatColorUnlocked(key)) { showToast('まだ解放されていない色です'); return; }
+    state.catColor = key;
+    Storage.saveCatColor(key);
+    applyCatColor();
+    renderCatColorSwatches();
+    const opt = CAT_COLOR_OPTIONS.find(o => o.key === key);
+    showToast(`相棒の色を「${opt.label}」に変更しました`);
+  }
+  document.getElementById('cat-color-swatch-list').addEventListener('click', handleCatColorSwatchClick);
+  document.getElementById('cat-color-swatch-list-companion').addEventListener('click', handleCatColorSwatchClick);
+
+  // 相棒タブ右上：クイック設定の開閉
+  document.getElementById('companion-settings-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.sort-dropdown.open').forEach(d => {
+      if (d.id !== 'companion-settings-dropdown') d.classList.remove('open');
+    });
+    document.getElementById('companion-settings-dropdown').classList.toggle('open');
+  });
+  document.getElementById('companion-settings-close-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    document.getElementById('companion-settings-dropdown').classList.remove('open');
+  });
+
   // 名言追加・編集モーダル
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   document.getElementById('modal-save').addEventListener('click', saveQuote);
@@ -1548,6 +1639,7 @@ function switchTab(tab) {
   if (tab === 'companion') {
     if (repositionCompanionToy) requestAnimationFrame(repositionCompanionToy);
     renderCompanionQuoteComment(Math.floor(state.catAffection.total / CAT_AFFECTION_PER_LEVEL) + 1); // タブに来るたびに一言を出し直す
+    requestAnimationFrame(layoutCompanionPanel);
   }
 }
 
@@ -1556,6 +1648,39 @@ function pinStickyToolbarSpacing(toolbar, section) {
   if (!toolbar || !body) return;
   body.style.paddingTop = (toolbar.offsetHeight + 20) + 'px';
 }
+
+// 相棒タブ：「なつき度ゲージ → クイック設定パネル → 猫」の順で重ならないよう実測して配置する。
+// pxの決め打ちだと端末サイズやフォント設定次第で重なってしまうため、毎回実際のサイズを測って計算する
+function layoutCompanionPanel() {
+  const screen = document.querySelector('.companion-screen');
+  const affectionEl = document.querySelector('.companion-affection-compact');
+  const dropdown = document.getElementById('companion-settings-dropdown');
+  const panelEl = dropdown ? dropdown.querySelector('.companion-settings-menu') : null;
+  if (!screen || !affectionEl || !panelEl) return;
+
+  // 特定の高さで段階的に切り替える(ブレークポイント)のではなく、画面の高さに比例して
+  // 連続的に余白を詰める。900px相当を基準に0.35〜1倍の範囲でスケールする
+  const scale = Math.min(1, Math.max(0.35, window.innerHeight / 900));
+  const GAP_ABOVE_PANEL = 10 * scale; // ゲージとパネルの間
+  const GAP_BELOW_PANEL = 18 * scale; // パネルと猫の間
+
+  // パネルの実際の高さを測るため、閉じていれば一時的に開いた状態で測定してから元に戻す
+  const wasOpen = dropdown.classList.contains('open');
+  if (!wasOpen) dropdown.classList.add('open');
+  const affectionRect = affectionEl.getBoundingClientRect();
+  const panelRect = panelEl.getBoundingClientRect();
+  if (!wasOpen) dropdown.classList.remove('open');
+
+  const panelTop = affectionRect.bottom + GAP_ABOVE_PANEL;
+  panelEl.style.top = panelTop + 'px';
+
+  const screenRect = screen.getBoundingClientRect();
+  screen.style.paddingTop = (panelTop + panelRect.height - screenRect.top + GAP_BELOW_PANEL) + 'px';
+}
+
+window.addEventListener('resize', () => {
+  if (state.currentTab === 'companion') layoutCompanionPanel();
+});
 
 // ── モーダル表示中の背面スクロール制御 ────────────────────
 function lockBodyScroll() {
@@ -1635,6 +1760,26 @@ function deleteQuote(id) {
 }
 
 // ── 詳細モーダル（日記編集） ──────────────────────────────
+// この人物について／この名言についての長文を2行に折りたたみ、実際にはみ出している場合だけ「続きを読む」を出す
+// （Replay/Previewボタンにたどり着くまでにスクロールが必要になる問題への対策）
+function setupExpandableInfo(textId, toggleId) {
+  const textEl = document.getElementById(textId);
+  const toggleEl = document.getElementById(toggleId);
+  textEl.classList.remove('expanded');
+  toggleEl.textContent = '続きを読む';
+  requestAnimationFrame(() => {
+    toggleEl.style.display = textEl.scrollHeight > textEl.clientHeight + 1 ? 'inline-block' : 'none';
+  });
+}
+
+function bindExpandableToggle(textId, toggleId) {
+  document.getElementById(toggleId).addEventListener('click', () => {
+    const textEl = document.getElementById(textId);
+    const isExpanded = textEl.classList.toggle('expanded');
+    document.getElementById(toggleId).textContent = isExpanded ? '閉じる' : '続きを読む';
+  });
+}
+
 function openDetailModal(id) {
   const q = state.quotes.find(q => q.id === id);
   if (!q) return;
@@ -1654,6 +1799,7 @@ function openDetailModal(id) {
   if (q.authorBio) {
     document.getElementById('detail-bio-text').textContent = q.authorBio;
     bioBlock.style.display = 'block';
+    setupExpandableInfo('detail-bio-text', 'detail-bio-toggle');
   } else {
     bioBlock.style.display = 'none';
   }
@@ -1662,6 +1808,7 @@ function openDetailModal(id) {
   if (q.background) {
     document.getElementById('detail-background-text').textContent = q.background;
     backgroundBlock.style.display = 'block';
+    setupExpandableInfo('detail-background-text', 'detail-background-toggle');
   } else {
     backgroundBlock.style.display = 'none';
   }
@@ -1965,10 +2112,16 @@ function getCatElements() {
   return ['cat-widget', 'cat-widget-companion'].map(id => document.getElementById(id)).filter(Boolean);
 }
 
+// 猫はimg（色固定）ではなくmask-imageで描画しており、色は--cat-color変数で塗り替えられる
+function setCatMaskImage(el, src) {
+  el.style.webkitMaskImage = `url('${src}')`;
+  el.style.maskImage = `url('${src}')`;
+}
+
 function setCatState(nextState) {
   catState = nextState;
   getCatElements().forEach(el => {
-    el.src = CAT_IMG[nextState];
+    setCatMaskImage(el, CAT_IMG[nextState]);
     el.classList.remove(...CAT_NON_SLEEP_STATES);
     if (nextState !== 'sleeping') {
       void el.offsetWidth; // アニメーションを再生させるための強制リフロー
@@ -2128,14 +2281,19 @@ function catAffectionTitle(level) {
 }
 
 function catDisplayName() {
-  return state.catName || '猫';
+  // 「猫」固定だとキャラクターが変わった際に文言修正が必要になるため、汎用的な「相棒」をデフォルトにする
+  return state.catName || '相棒';
+}
+
+function currentCatAffectionLevel() {
+  return Math.floor(state.catAffection.total / CAT_AFFECTION_PER_LEVEL) + 1;
 }
 
 function renderCatAffectionUI() {
-  const level = Math.floor(state.catAffection.total / CAT_AFFECTION_PER_LEVEL) + 1;
+  const level = currentCatAffectionLevel();
   const intoLevel = state.catAffection.total % CAT_AFFECTION_PER_LEVEL;
   const pct = (intoLevel / CAT_AFFECTION_PER_LEVEL * 100) + '%';
-  const countText = `${intoLevel} / ${CAT_AFFECTION_PER_LEVEL}pt`;
+  const countText = `${intoLevel}/${CAT_AFFECTION_PER_LEVEL}`;
   const lvText = `Lv.${level}`;
   const rankText = catAffectionTitle(level);
   const titleText = `${catDisplayName()}の懐き度`;
@@ -2152,6 +2310,8 @@ function renderCatAffectionUI() {
   });
 
   renderCompanionQuoteComment(level);
+  renderCatColorSwatches();
+  if (state.currentTab === 'companion') requestAnimationFrame(layoutCompanionPanel);
 }
 
 // カテゴリ別の一言（通常時）
@@ -2367,16 +2527,251 @@ function initCompanionToy() {
   toy.addEventListener('pointerup', () => { toyDragging = false; });
   toy.addEventListener('pointercancel', () => { toyDragging = false; });
 
-  // 初期位置：右下あたりに置いておく。相棒タブがまだ非表示（display:none）だと
+  // 初期位置：猫の右下あたりに置いておく。相棒タブがまだ非表示（display:none）だと
   // サイズが測れないため、実際にタブが表示されたタイミング（switchTab）で改めて呼び出す
   repositionCompanionToy = () => {
     if (toyPositioned) return;
     const rect = stage.getBoundingClientRect();
     if (rect.width === 0) return;
     toyPositioned = true;
-    setToyPosition(rect.width - 50, rect.height - 50, true);
+    // 猫の絵にかぶらないよう、円のすぐ外側（枠の右下）に置く。ポーズが変わっても絵自体の箱の大きさは変わらないため位置は動かない
+    const catRect = catEl.getBoundingClientRect();
+    const x = (catRect.left - rect.left) + catRect.width + 6;
+    const y = (catRect.top - rect.top) + catRect.height + 6;
+    setToyPosition(x, y, true);
   };
   requestAnimationFrame(repositionCompanionToy);
+}
+
+// ── 旅マップ ──────────────────────────────────────────────
+const JOURNEY_LENGTH = 30;
+const JOURNEY_MILESTONES = [10, 20, 30];
+const JOURNEY_TIER_FOR_MILESTONE = { 10: 1, 20: 2, 30: 3 }; // 1=銅 2=銀 3=金
+const JOURNEY_TIER_CLASS = { 0: '', 1: 'tier-bronze', 2: 'tier-silver', 3: 'tier-gold' };
+const RING_CHOICE_OPTIONS = [
+  { key: 'none',   tier: 0, label: 'なし' },
+  { key: 'bronze', tier: 1, label: '銅' },
+  { key: 'silver', tier: 2, label: '銀' },
+  { key: 'gold',   tier: 3, label: '金' }
+];
+
+// 到達済みの節目に応じて、猫の枠を銅→銀→金と永続的に進化させる（クイズ正解数ぶん歩数を進める）
+function advanceJourney(steps) {
+  for (let i = 0; i < steps; i++) {
+    state.journey.steps++;
+    const tier = JOURNEY_TIER_FOR_MILESTONE[state.journey.steps];
+    if (tier) state.journey.bestTier = Math.max(state.journey.bestTier, tier);
+    if (state.journey.steps >= JOURNEY_LENGTH) {
+      state.journey.loops++;
+      state.journey.steps = 0;
+    }
+  }
+  Storage.saveJourney(state.journey);
+  renderJourney();
+}
+
+function renderJourney() {
+  const countEl = document.getElementById('journey-count');
+  if (!countEl) return;
+  const fillPct = (state.journey.steps / JOURNEY_LENGTH) * 100;
+  countEl.innerHTML = `${state.journey.steps}<span class="slash">/</span>${JOURNEY_LENGTH}歩`;
+  document.getElementById('journey-line-fill').style.width = fillPct + '%';
+  document.getElementById('journey-current').style.left = fillPct + '%';
+  JOURNEY_MILESTONES.forEach(m => {
+    const dot = document.getElementById('journey-milestone-' + m);
+    if (dot) dot.classList.toggle('done', state.journey.steps >= m);
+  });
+  const ring = document.getElementById('journey-frame-ring-companion');
+  if (ring) ring.className = 'journey-frame-ring ' + (JOURNEY_TIER_CLASS[effectiveRingTier()] || '');
+  const loopsEl = document.getElementById('journey-loops');
+  if (loopsEl) loopsEl.textContent = state.journey.loops > 0 ? `旅の完走：${state.journey.loops}回` : '';
+  renderRingSwatches();
+  if (state.currentTab === 'companion') requestAnimationFrame(layoutCompanionPanel);
+}
+
+// 選ばれている枠の色（未選択なら解放済みの最高ランクを自動表示）。実績（bestTier）を超えないようclampする
+// 管理者モードでは、着せ替えテーマ等と同じく全ての色をプレビューできるようにする
+function isRingTierUnlocked(tier) {
+  return state.isAdmin || tier <= state.journey.bestTier;
+}
+
+function effectiveRingTier() {
+  const auto = RING_CHOICE_OPTIONS.find(o => o.tier === state.journey.bestTier) || RING_CHOICE_OPTIONS[0];
+  const chosenKey = state.journeyRingChoice || auto.key;
+  const chosen = RING_CHOICE_OPTIONS.find(o => o.key === chosenKey) || auto;
+  if (state.isAdmin) return chosen.tier;
+  return Math.min(chosen.tier, state.journey.bestTier);
+}
+
+function renderRingSwatches() {
+  const lockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+  const activeTier = effectiveRingTier();
+  const html = RING_CHOICE_OPTIONS.map(o => {
+    const unlocked = isRingTierUnlocked(o.tier);
+    const isActive = unlocked && o.tier === activeTier;
+    const swatchStyle = o.tier === 0
+      ? 'background: rgba(255,255,255,0.08);'
+      : `background: ${{1:'#C68A4E',2:'#C7CCD6',3:'#F0C878'}[o.tier]};`;
+    return `
+      <button class="theme-swatch${isActive ? ' active' : ''}${unlocked ? '' : ' locked'}" data-ring="${o.key}">
+        <div class="theme-swatch-circle" style="${swatchStyle}">
+          ${unlocked ? '' : `<span class="theme-swatch-lock-icon">${lockSvg}</span>`}
+        </div>
+        <div class="theme-swatch-label">${unlocked ? o.label : '？'}</div>
+      </button>
+    `;
+  }).join('');
+  ['ring-swatch-list', 'ring-swatch-list-companion'].forEach(id => {
+    const list = document.getElementById(id);
+    if (list) list.innerHTML = html;
+  });
+}
+
+// ── 猫の色（なつき度Lvに応じて解放） ──────────────────────
+const CAT_COLOR_OPTIONS = [
+  { key: 'white',    color: '#FFFFFF', label: '白',       minLevel: 1 },
+  { key: 'cream',    color: '#FFE9C6', label: 'クリーム', minLevel: 3 },
+  { key: 'pink',     color: '#FFB6C1', label: 'ピンク',   minLevel: 6 },
+  { key: 'mint',     color: '#9FE8C8', label: 'ミント',   minLevel: 9 },
+  { key: 'lavender', color: '#C9B6E4', label: 'ラベンダー', minLevel: 12 },
+  { key: 'gold',     color: '#F0C878', label: 'ゴールド', minLevel: 15 }
+];
+
+// 管理者モードでは、着せ替えテーマ等と同じく全ての色をプレビューできるようにする
+function isCatColorUnlocked(key) {
+  if (state.isAdmin) return true;
+  const opt = CAT_COLOR_OPTIONS.find(o => o.key === key);
+  return !!opt && currentCatAffectionLevel() >= opt.minLevel;
+}
+
+// 猫の色を実際にCSSへ反映する（保存済みの色がまだ未解放＝レベルが下がることは無いが念のため白にフォールバック）
+function applyCatColor() {
+  const key = isCatColorUnlocked(state.catColor) ? state.catColor : 'white';
+  const opt = CAT_COLOR_OPTIONS.find(o => o.key === key) || CAT_COLOR_OPTIONS[0];
+  document.documentElement.style.setProperty('--cat-color', opt.color);
+}
+
+function renderCatColorSwatches() {
+  const lockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+  const html = CAT_COLOR_OPTIONS.map(o => {
+    const unlocked = isCatColorUnlocked(o.key);
+    const isActive = unlocked && state.catColor === o.key;
+    return `
+      <button class="theme-swatch${isActive ? ' active' : ''}${unlocked ? '' : ' locked'}" data-cat-color="${o.key}">
+        <div class="theme-swatch-circle" style="background: ${o.color}; border-color: rgba(0,0,0,0.15);">
+          ${unlocked ? '' : `<span class="theme-swatch-lock-icon">${lockSvg}</span>`}
+        </div>
+        <div class="theme-swatch-label">${unlocked ? o.label : 'Lv.' + o.minLevel}</div>
+      </button>
+    `;
+  }).join('');
+  ['cat-color-swatch-list', 'cat-color-swatch-list-companion'].forEach(id => {
+    const list = document.getElementById(id);
+    if (list) list.innerHTML = html;
+  });
+}
+
+// ── 名言クイズ ────────────────────────────────────────────
+const QUIZ_QUESTIONS_PER_SESSION = 5;
+let quizSession = null;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 解放済みの名言から、著者当て／カテゴリ当ての4択問題を1問作る
+function buildQuizQuestion(pool) {
+  const target = pool[Math.floor(Math.random() * pool.length)];
+  if (Math.random() < 0.5) {
+    const correct = target.author;
+    const others = shuffle([...new Set(state.quotes.map(q => q.author))].filter(a => a !== correct)).slice(0, 3);
+    return { quote: target, question: 'この名言の著者は？', choices: shuffle([correct, ...others]), correct };
+  }
+  const correct = CATEGORY_LABELS[target.category] || target.category;
+  const others = shuffle(Object.keys(CATEGORY_LABELS).filter(c => c !== target.category)).slice(0, 3).map(c => CATEGORY_LABELS[c] || c);
+  return { quote: target, question: 'このカテゴリは？', choices: shuffle([correct, ...others]), correct };
+}
+
+function startQuiz() {
+  const unlockedIds = state.unlocked.map(u => u.id);
+  const pool = state.quotes.filter(q => unlockedIds.includes(q.id) && q.author);
+  if (pool.length === 0) { showToast('もう少し名言を集めてから挑戦しよう'); return; }
+
+  const questions = [];
+  for (let i = 0; i < QUIZ_QUESTIONS_PER_SESSION; i++) questions.push(buildQuizQuestion(pool));
+  quizSession = { questions, index: 0, correctCount: 0 };
+
+  document.getElementById('quiz-result').style.display = 'none';
+  ['quiz-quote-text', 'quiz-question-text', 'quiz-choices', 'quiz-progress'].forEach(id => {
+    document.getElementById(id).style.display = '';
+  });
+  renderQuizQuestion();
+  document.getElementById('quiz-modal-overlay').classList.add('open');
+  lockBodyScroll();
+}
+
+function renderQuizQuestion() {
+  const q = quizSession.questions[quizSession.index];
+  document.getElementById('quiz-progress').textContent = `問題 ${quizSession.index + 1} / ${quizSession.questions.length}`;
+  document.getElementById('quiz-quote-text').textContent = q.quote.text;
+  document.getElementById('quiz-question-text').textContent = q.question;
+  const choicesEl = document.getElementById('quiz-choices');
+  choicesEl.innerHTML = q.choices.map(c =>
+    `<button class="quiz-choice-btn" data-choice="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+  ).join('');
+  choicesEl.querySelectorAll('.quiz-choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => answerQuiz(btn, q), { once: true });
+  });
+}
+
+function answerQuiz(btn, q) {
+  const choicesEl = document.getElementById('quiz-choices');
+  const isCorrect = btn.dataset.choice === q.correct;
+  choicesEl.querySelectorAll('.quiz-choice-btn').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.choice === q.correct) b.classList.add('correct');
+    else if (b === btn) b.classList.add('wrong');
+  });
+  if (isCorrect) quizSession.correctCount++;
+  state.quizStats.total++;
+  if (isCorrect) state.quizStats.correct++;
+  Storage.saveQuizStats(state.quizStats);
+
+  setTimeout(() => {
+    quizSession.index++;
+    if (quizSession.index < quizSession.questions.length) renderQuizQuestion();
+    else finishQuiz();
+  }, 1000);
+}
+
+function finishQuiz() {
+  const gained = quizSession.correctCount;
+  const total = quizSession.questions.length;
+  advanceJourney(gained);
+
+  ['quiz-quote-text', 'quiz-question-text', 'quiz-choices', 'quiz-progress'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('quiz-result').style.display = 'block';
+  document.getElementById('quiz-result-title').textContent = `${total}問中${gained}問正解！`;
+  document.getElementById('quiz-result-detail').textContent = gained > 0 ? `旅が${gained}歩すすみました` : 'また挑戦してみよう';
+  quizSession = null;
+}
+
+function closeQuizModal() {
+  document.getElementById('quiz-modal-overlay').classList.remove('open');
+  unlockBodyScroll();
+}
+
+function initQuiz() {
+  document.getElementById('quiz-start-btn').addEventListener('click', startQuiz);
+  document.getElementById('quiz-close-btn').addEventListener('click', closeQuizModal);
+  document.getElementById('quiz-close-x-btn').addEventListener('click', closeQuizModal);
 }
 
 // ── お気に入り ────────────────────────────────────────────

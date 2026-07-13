@@ -225,21 +225,76 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 18px;
+  /* 特定の端末幅で切り替えるブレークポイントではなく、画面の高さに応じて連続的にスケールさせる。
+     こうすることで、今回のiPhone 6/7/8に限らずどんな高さの端末でも自動的に収まる */
+  --cat-size: clamp(90px, 18vh, 180px);
+  gap: clamp(8px, 1.4vh, 18px);
+  /* topの実際の値はlayoutCompanionPanel()（js/app.js）が実測して都度インラインで上書きする。
+     ここはJS実行前の一瞬だけ使われるフォールバック値 */
+  padding-top: 170px;
+  padding-bottom: clamp(12px, 2vh, 24px);
+}
+
+.journey-card {
+  /* 残りの余白を全部ここより上に集め、旅マップ・クイズを画面下部に寄せる */
+  margin-top: auto;
+}
+
+.cat-stage-companion {
+  position: relative;
+  width: var(--cat-size, 180px);
+  height: var(--cat-size, 180px);
+  flex-shrink: 0;
 }
 
 .cat-widget-companion {
-  width: 180px;
-  height: 180px;
+  width: var(--cat-size, 180px);
+  height: var(--cat-size, 180px);
   border-radius: 50%;
-  image-rendering: pixelated;
   cursor: pointer;
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
   transition: transform 0.6s ease, opacity 0.6s ease;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+  background-color: var(--cat-color, #FFFFFF);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* 旅の節目に到達すると、猫の枠が銅→銀→金と進化していく（絵そのものは変えずフレームだけ変化させる） */
+.journey-frame-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 3px solid transparent;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.journey-frame-ring.tier-bronze {
+  border-color: #C68A4E;
+  box-shadow: 0 0 10px rgba(198, 138, 78, 0.5);
+}
+
+.journey-frame-ring.tier-silver {
+  border-color: #C7CCD6;
+  box-shadow: 0 0 12px rgba(199, 204, 214, 0.6);
+}
+
+.journey-frame-ring.tier-gold {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 16px rgba(240, 200, 120, 0.8);
+  animation: journeyGoldPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes journeyGoldPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(240, 200, 120, 0.6); }
+  50%      { box-shadow: 0 0 22px rgba(240, 200, 120, 1); }
 }
 
 .cat-widget-companion.hidden {
@@ -290,17 +345,239 @@ main {
   height: 100%;
 }
 
-.companion-affection {
+/* 相棒タブ右上のクイック設定（枠の色・猫の色）：一覧タブの並び替えドロップダウンと同じ開閉の仕組みを流用 */
+.companion-settings-dropdown.sort-dropdown {
+  /* 注意：ここにtransformを付けると、中の設定パネル(position:fixed)の基準が
+     画面全体からこの要素に変わってしまい、中央配置が壊れるので付けないこと */
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+}
+
+.companion-settings-btn.sort-dropdown-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+.companion-settings-menu.sort-dropdown-menu {
+  /* ボタンには追従させず、画面幅に対して中央に表示する。
+     topの実際の値はlayoutCompanionPanel()（js/app.js）がなつき度ゲージの実測位置から都度計算してインラインで上書きする。
+     ここはJS実行前の一瞬だけ使われるフォールバック値 */
+  position: fixed;
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + 80px);
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 0; /* .sort-dropdown-menuのmin-width:100%がfixed化でビューポート基準になり暴走するため打ち消す */
+  max-width: calc(100vw - 32px);
+  /* パネルの余白・スウォッチのサイズも画面の高さに応じて連続的にスケールさせ、
+     短い画面ではパネル自体の高さを抑えて猫や下部のカードを圧迫しないようにする */
+  padding: clamp(7px, 1.4vh, 14px) clamp(10px, 2.2vh, 18px);
+  background: rgba(26, 10, 46, 0.55);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+}
+
+.companion-settings-title {
+  font-size: 0.65rem;
+  font-weight: bold;
+  line-height: 1;
+  color: var(--primary-light);
+  letter-spacing: 0.05em;
+  margin-bottom: clamp(2px, 0.6vh, 6px);
+  text-align: center;
+}
+
+.companion-settings-title + .companion-quick-swatch-list {
+  margin-bottom: clamp(5px, 1.2vh, 12px);
+}
+
+/* .theme-swatch-listの方が後の行で定義されており、同じ詳細度だとpadding/gapがそちらに上書きされるため複合セレクタで勝たせる */
+.companion-quick-swatch-list.theme-swatch-list {
+  padding: 0;
+  gap: clamp(4px, 0.9vh, 9px);
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+.companion-quick-swatch-list .theme-swatch {
+  width: 32px;
+}
+
+.companion-quick-swatch-list .theme-swatch-circle {
+  width: clamp(18px, 2.8vh, 26px);
+  height: clamp(18px, 2.8vh, 26px);
+  margin-bottom: 3px;
+}
+
+.companion-quick-swatch-list .theme-swatch-label {
+  font-size: 0.56rem;
+}
+
+.companion-quick-swatch-list .theme-swatch-lock-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.companion-affection-compact {
+  /* 設定ボタンと高さの中心を揃え、中央に集まる猫・クイズの流れとは切り離す */
+  position: absolute;
+  top: 30px;
+  transform: translateY(-50%);
+  left: 16px;
+  right: 52px;
+  max-width: 300px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  z-index: 9;
+}
+
+.companion-affection-compact .settings-label {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.companion-affection-compact .affection-track {
+  flex: 1;
+  min-width: 32px;
+}
+
+.companion-affection-compact .affection-count {
+  font-size: 0.68rem;
+  color: rgba(255, 248, 230, 0.55);
+  white-space: nowrap;
+  margin-top: 0; /* 共通クラスの縦積み用margin-top:6pxが横並びの帯でも効いてしまい、はみ出して見えていた */
+}
+
+/* 旅マップ：内側の余白も画面の高さに応じて連続的にスケールさせる（特定端末向けの決め打ちにしない） */
+.journey-card {
   width: 100%;
-  max-width: 280px;
-  padding: 14px 16px;
+  max-width: 300px;
+  padding: clamp(8px, 1.2vh, 14px) 16px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 14px;
 }
 
+.journey-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(6px, 1vh, 14px);
+}
+
+.journey-badge {
+  font-size: 0.62rem;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  color: #0a0820;
+  background: var(--primary-light);
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.journey-count {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: rgba(255, 248, 230, 0.95);
+}
+
+.journey-count .slash {
+  color: rgba(255, 248, 230, 0.45);
+  font-weight: normal;
+  margin: 0 2px;
+}
+
+.journey-line-wrap {
+  position: relative;
+  padding: 0 7px;
+  margin-bottom: clamp(8px, 1.2vh, 16px);
+}
+
+.journey-line {
+  position: relative;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.journey-line-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #ff8fab, #ff5c8a);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.journey-dot {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #14103a;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  transform: translate(-50%, -50%);
+}
+
+.journey-dot.milestone.done {
+  background: var(--primary-light);
+  border-color: var(--primary-light);
+  box-shadow: 0 0 10px rgba(240, 200, 120, 0.7);
+}
+
+.journey-current {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+  transition: left 0.4s ease;
+}
+
+.quiz-start-btn {
+  width: 100%;
+  padding: clamp(7px, 1vh, 11px);
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #2C1810;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.journey-loops {
+  margin-top: 8px;
+  font-size: 0.68rem;
+  color: rgba(255, 248, 230, 0.45);
+  text-align: center;
+}
+
 /* 猫が今日の名言について一言つぶやく吹き出し（なつき度が一定を超えると表示） */
 .companion-speech {
-  display: none;
+  /* display:none/blockで切り替えると非表示中はスペースを取らず、
+     表示・非表示が切り替わるたびに猫の位置がズレてしまうため、
+     常にスペースを確保したまま visibility/opacity だけ切り替える */
+  visibility: hidden;
+  opacity: 0;
   position: relative;
   background: rgba(255, 255, 255, 0.92);
   color: #3a2a1a;
@@ -311,10 +588,12 @@ main {
   max-width: 260px;
   text-align: center;
   line-height: 1.5;
+  transition: opacity 0.2s ease;
 }
 
 .companion-speech.show {
-  display: block;
+  visibility: visible;
+  opacity: 1;
 }
 
 .companion-speech::after {
@@ -1306,13 +1585,19 @@ main {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  image-rendering: pixelated;
   cursor: pointer;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
   transition: transform 0.6s ease, opacity 0.6s ease;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+  background-color: var(--cat-color, #FFFFFF);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .cat-widget.hidden {
@@ -2206,7 +2491,7 @@ html[data-theme="snow"] .snow-layer {
 .centered-modal-box {
   border-radius: 20px;
   padding: 24px 20px;
-  max-height: 85vh;
+  max-height: 92vh;
   overflow-y: auto;
   animation: centeredModalIn 0.22s ease;
 }
@@ -2497,14 +2782,20 @@ html[data-theme="snow"] .snow-layer {
 
 .diary-close-btn {
   position: absolute;
-  top: 12px;
-  right: 14px;
-  background: none;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
   border: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.1rem;
+  border-radius: 50%;
+  color: rgba(255, 248, 230, 0.9);
+  font-size: 0.95rem;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   line-height: 1;
   z-index: 1;
 }
@@ -2609,13 +2900,26 @@ html[data-theme="snow"] .snow-layer {
 .detail-admin-status.locked { color: var(--danger); }
 .detail-admin-status.locked::before { background: var(--danger); box-shadow: 0 0 5px rgba(192, 57, 43, 0.7); }
 
+/* モーダル内がスクロールしても、Replay/Previewボタンにはスクロールなしでいつでもたどりつけるよう下部に固定する */
 .detail-admin-actions {
   display: flex;
   justify-content: center;
   gap: 6px;
   margin-top: 16px;
   padding-top: 14px;
+  padding-bottom: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  bottom: 0;
+  background: var(--card);
+}
+
+.detail-modal-box .detail-admin-actions {
+  background: #14122a;
+}
+
+.detail-modal-box.has-character-bg .detail-admin-actions {
+  background: rgba(10, 6, 20, 0.92);
 }
 
 .detail-admin-btn {
@@ -2705,6 +3009,105 @@ html[data-theme="snow"] .snow-layer {
 
 .login-modal-box .modal-title {
   color: rgba(255, 248, 230, 0.95);
+}
+
+.quiz-modal-box {
+  width: 340px;
+  max-width: 90vw;
+  background: #14122a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.quiz-modal-box .modal-title {
+  color: rgba(255, 248, 230, 0.95);
+}
+
+.quiz-progress {
+  font-size: 0.68rem;
+  color: rgba(255, 248, 230, 0.45);
+  text-align: center;
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+
+.quiz-quote {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  text-align: center;
+  margin-bottom: 18px;
+  color: rgba(255, 248, 230, 0.95);
+}
+
+.quiz-question {
+  font-size: 0.78rem;
+  color: var(--primary-light);
+  text-align: center;
+  margin-bottom: 14px;
+  font-weight: bold;
+}
+
+.quiz-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* 正解／不正解の色は選んだ後にだけ付ける。レア度など他の要素の色は一切持ち込まない（フェアな4択にするため） */
+.quiz-choice-btn {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 248, 230, 0.95);
+  font-size: 0.78rem;
+  text-align: center;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.quiz-choice-btn:disabled {
+  cursor: default;
+}
+
+.quiz-choice-btn.correct {
+  border-color: #00C853;
+  background: rgba(0, 200, 83, 0.18);
+  color: #9CFFC7;
+}
+
+.quiz-choice-btn.wrong {
+  border-color: #ff5c8a;
+  background: rgba(255, 92, 138, 0.18);
+  color: #ffb0cb;
+}
+
+.quiz-result-title {
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+  color: rgba(255, 248, 230, 0.95);
+  margin-bottom: 8px;
+}
+
+.quiz-result-detail {
+  font-size: 0.82rem;
+  text-align: center;
+  color: rgba(255, 248, 230, 0.7);
+  margin-bottom: 20px;
+}
+
+.quiz-close-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #2C1810;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
 .login-modal-current {
@@ -2851,8 +3254,14 @@ html[data-theme="snow"] .snow-layer {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  image-rendering: pixelated;
   flex-shrink: 0;
+  background-color: var(--cat-color, #FFFFFF);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .login-modal-speech {
@@ -2924,6 +3333,30 @@ html[data-theme="snow"] .snow-layer {
   font-size: 0.85rem;
   line-height: 1.7;
   color: var(--text-sub);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.detail-info-text.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.detail-info-toggle {
+  display: none;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: bold;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+/* Replay/Previewボタンを押すのにスクロールが必要にならないよう、コメント欄を2行分に圧縮 */
+.detail-modal-box .form-textarea {
+  min-height: 56px;
 }
 
 .diary-char-row {
