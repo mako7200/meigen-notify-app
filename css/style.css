@@ -1615,8 +1615,8 @@ main {
   display: none;
 }
 
-.cat-widget.cat-awake, .cat-widget.cat-yawn, .cat-widget.cat-grooming, .cat-widget.cat-stretching,
-.cat-widget-companion.cat-awake, .cat-widget-companion.cat-yawn, .cat-widget-companion.cat-grooming, .cat-widget-companion.cat-stretching {
+.cat-widget.cat-awake, .cat-widget.cat-yawn, .cat-widget.cat-grooming, .cat-widget.cat-stretching, .cat-widget.cat-hissing,
+.cat-widget-companion.cat-awake, .cat-widget-companion.cat-yawn, .cat-widget-companion.cat-grooming, .cat-widget-companion.cat-stretching, .cat-widget-companion.cat-hissing {
   animation: catEyeFade 0.25s ease-out;
 }
 

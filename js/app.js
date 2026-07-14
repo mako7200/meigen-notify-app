@@ -1447,6 +1447,26 @@ function bindEvents() {
       }, typewriterDuration(quote.text) + 2100); // レア度演出（+2秒後）が反映された後に鳴らす
     }
   });
+  document.getElementById('detail-share-btn').addEventListener('click', async () => {
+    const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
+    const quote = state.quotes.find(q => q.id === id);
+    if (!quote) return;
+    const shareText = `"${quote.text}" — ${quote.author}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText });
+      } catch (err) {
+        // ユーザーによるキャンセルなどは何もしない
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        showToast('クリップボードにコピーしました');
+      } catch (err) {
+        showToast('コピーに失敗しました');
+      }
+    }
+  });
   document.getElementById('detail-edit-btn').addEventListener('click', () => {
     const id = parseInt(document.getElementById('detail-modal-overlay').dataset.quoteId);
     closeDetailModal();
@@ -2099,9 +2119,10 @@ const CAT_IMG = {
   awake:      'images/animals/cat_awake_dot_transparent.png',
   yawn:       'images/animals/cat_yawn_dot_transparent.png',
   grooming:   'images/animals/cat_grooming_dot_transparent.png',
-  stretching: 'images/animals/cat_stretching_dot_transparent.png'
+  stretching: 'images/animals/cat_stretching_dot_transparent.png',
+  hissing:    'images/animals/cat_hissing_dot_transparent.png'
 };
-const CAT_NON_SLEEP_STATES = ['cat-awake', 'cat-yawn', 'cat-grooming', 'cat-stretching'];
+const CAT_NON_SLEEP_STATES = ['cat-awake', 'cat-yawn', 'cat-grooming', 'cat-stretching', 'cat-hissing'];
 let catIdleTimer = null;
 let catActionTimer = null;
 let catState = 'sleeping';
@@ -2134,7 +2155,8 @@ function setCatState(nextState) {
 const CAT_IDLE_ACTIONS = {
   yawn:       { minDuration: 1200, maxDuration: 2000 },
   grooming:   { minDuration: 2000, maxDuration: 3000 },
-  stretching: { minDuration: 2000, maxDuration: 3000 }
+  stretching: { minDuration: 2000, maxDuration: 3000 },
+  hissing:    { minDuration: 1500, maxDuration: 2500 }
 };
 
 function triggerCatIdleAction(key) {
@@ -2152,11 +2174,14 @@ function scheduleCatIdle() {
   setCatState('sleeping');
   const sleepTime = 8000 + Math.random() * 8000;
   catIdleTimer = setTimeout(() => {
+    // 威嚇の出現率は懐き度レベルが上がるほど下がるが、気まぐれな猫なので下限(5%)は残す
+    const hissingChance = 0.05 + 0.20 / currentCatAffectionLevel();
     const roll = Math.random();
     if (roll < 0.03) triggerCatHiding();
     else if (roll < 0.13) triggerCatIdleAction('yawn');
     else if (roll < 0.18) triggerCatIdleAction('grooming');
     else if (roll < 0.23) triggerCatIdleAction('stretching');
+    else if (roll < 0.23 + hissingChance) triggerCatIdleAction('hissing');
     else scheduleCatIdle();
   }, sleepTime);
 }
@@ -2397,6 +2422,7 @@ const COMPANION_TEST_ACTIONS = [
   { key: 'yawn',       label: 'あくび' },
   { key: 'grooming',   label: '毛づくろい' },
   { key: 'stretching', label: '伸び' },
+  { key: 'hissing',    label: '威嚇' },
   { key: 'hiding',     label: '隠れんぼ' }
 ];
 
