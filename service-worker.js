@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meigen-notify-v56';
+const CACHE_NAME = 'meigen-notify-v57';
 const CACHE_FILES = [
   './',
   './index.html',
@@ -55,11 +55,15 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   // localhost では毎回サーバーから取得（開発中の変更を即反映させるため）
   if (event.request.url.includes('localhost') || event.request.url.includes('127.0.0.1')) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => new Response('Network error', { status: 503, statusText: 'Service Unavailable' }))
+    );
     return;
   }
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    caches.match(event.request).then(cached =>
+      cached || fetch(event.request).catch(() => new Response('Network error', { status: 503, statusText: 'Service Unavailable' }))
+    )
   );
 });
 
