@@ -1709,6 +1709,39 @@ main {
   100% { transform: scale(1.9); opacity: 0; }
 }
 
+/* ヘッダーの猫をタップした時だけ、波紋の代わりに肉球を一瞬表示する演出 */
+.cat-paw-flash {
+  position: fixed;
+  width: 26px;
+  height: 26px;
+  margin-left: -13px;
+  margin-top: -13px;
+  background-color: #FFFFFF;
+  -webkit-mask-image: url('../images/icons/PawPads_transparent.png');
+  mask-image: url('../images/icons/PawPads_transparent.png');
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7)); /* 猫自身の色（白・クリーム等）に埋もれず、どんな背景でも見えるように */
+  pointer-events: none;
+  z-index: 150;
+  animation: catPawFlashAnim 0.65s ease-out forwards;
+}
+
+/* なつき度が実際に上がったタップだけ、ハートと同じ色に変えて分かるようにする */
+.cat-paw-flash.affection-gain {
+  background-color: #FF5C8A;
+}
+
+@keyframes catPawFlashAnim {
+  0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+  25%  { transform: translateY(-4px) scale(1.15); opacity: 1; }
+  100% { transform: translateY(-26px) scale(1); opacity: 0; }
+}
+
 .scroll-top-btn.show {
   display: flex;
 }

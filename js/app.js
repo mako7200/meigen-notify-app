@@ -2454,6 +2454,17 @@ function spawnCatTapRipple(catEl, isAffectionGain) {
   setTimeout(() => ripple.remove(), 500);
 }
 
+// ヘッダーの猫だけ、波紋の代わりに肉球を一瞬表示する（サイズは肉球アイコン自体の大きさで固定）
+function spawnCatPawFlash(catEl, isAffectionGain) {
+  const rect = catEl.getBoundingClientRect();
+  const paw = document.createElement('div');
+  paw.className = 'cat-paw-flash' + (isAffectionGain ? ' affection-gain' : '');
+  paw.style.left = (rect.left + rect.width / 2) + 'px';
+  paw.style.top = (rect.top + rect.height / 2) + 'px';
+  document.body.appendChild(paw);
+  setTimeout(() => paw.remove(), 500);
+}
+
 // ── 管理者モード：相棒の反応テスト表示（懐き度には影響させない） ──
 // key は CAT_TAP_REACTIONS または CAT_IDLE_ACTIONS のいずれかに対応させる
 const COMPANION_TEST_ACTIONS = [
@@ -2522,7 +2533,9 @@ function bindCatTapHandler(el) {
   el.addEventListener('click', () => {
     if (catState !== 'sleeping' || Date.now() < catInputLockedUntil) return; // 反応中・クールダウン中のタップは受け付けないため、波紋も出さない
     const willGainAffection = catTapCount + 1 >= 3 && catAffectionRemainingToday() > 0;
-    spawnCatTapRipple(el, willGainAffection); // タップが受け付けられたことが毎回わかるよう波紋を出す。実際になつき度が上がるタップだけ色を変える
+    // タップが受け付けられたことが毎回わかる演出。実際になつき度が上がるタップだけ色を変える（ヘッダーの猫だけ肉球、相棒タブは波紋のまま）
+    if (el.id === 'cat-widget') spawnCatPawFlash(el, willGainAffection);
+    else spawnCatTapRipple(el, willGainAffection);
     catTapCount++;
     if (catTapCount < 3) return;
     catTapCount = 0;
@@ -2576,6 +2589,7 @@ function initCompanionToy() {
     setCatState('awake');
     void catEl.offsetWidth; // アニメーションを再生させるための強制リフロー
     catEl.classList.add('cat-pounce');
+    spawnCatPawFlash(toy, true); // 飛びついた瞬間、おもちゃの位置に肉球を表示する（懐き度が必ず上がるのでピンク固定）
     gainCatAffection(1);
     catActionTimer = setTimeout(() => {
       catEl.classList.remove('cat-pounce');

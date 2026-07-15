@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meigen-notify-v60';
+const CACHE_NAME = 'meigen-notify-v61';
 const CACHE_FILES = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const CACHE_FILES = [
   './images/icons/icon001_iphone_bg.jpg',
   './images/icons/icon002_iphone_bg.jpg',
   './images/icons/cat_outline_transparent.png',
+  './images/icons/PawPads_transparent.png',
   './images/characters/aizen.png',
   './images/characters/giorno.png',
   './images/characters/tanaka.png',
