@@ -270,6 +270,13 @@ const THEMES = {
   }
 };
 
+// デフォルトテーマ選択中だけ背景に敷ける壁紙の選択肢。他のキャラ・季節テーマの世界観は壁紙で隠さない
+const WALLPAPERS = {
+  none:  { label: 'なし', file: null },
+  night: { label: '夜の海辺', file: 'images/icons/icon001_iphone_bg.jpg' },
+  day:   { label: '昼の高原', file: 'images/icons/icon002_iphone_bg.jpg' }
+};
+
 function applyTheme(key) {
   const theme = THEMES[key] || THEMES.default;
   const root = document.documentElement.style;
@@ -277,6 +284,13 @@ function applyTheme(key) {
   root.setProperty('--theme-bg-size', theme.bgSize);
   root.setProperty('--theme-speed', theme.speed);
   document.documentElement.dataset.theme = key;
+
+  // 壁紙は「デフォルトテーマ」の時だけ表示する（他のキャラ・季節テーマの世界観を壊さないため）
+  const wallpaperFile = (WALLPAPERS[state.settings.wallpaper] || WALLPAPERS.night).file;
+  const showWallpaper = key === 'default' && !!wallpaperFile;
+  document.getElementById('app').classList.toggle('has-wallpaper', showWallpaper);
+  // カスタムプロパティ内のurl()はCSSではなく参照先(style.css)基準で解決されてしまうため、絶対URLに変換してから渡す
+  if (showWallpaper) root.setProperty('--theme-wallpaper', `url('${new URL(wallpaperFile, document.baseURI).href}')`);
 
   if (key === 'sakura') startSakuraPetals();
   else stopSakuraPetals();
@@ -550,6 +564,21 @@ function renderThemeSwatches() {
   }
 }
 
+function renderWallpaperSwatches() {
+  const list = document.getElementById('wallpaper-swatch-list');
+  list.innerHTML = Object.keys(WALLPAPERS).map(key => {
+    const wallpaper = WALLPAPERS[key];
+    const isActive = (state.settings.wallpaper || 'night') === key;
+    const bg = wallpaper.file ? `background-image: url('${wallpaper.file}');` : `background-image: linear-gradient(-45deg, ${THEMES.default.stops});`;
+    return `
+      <button class="theme-swatch${isActive ? ' active' : ''}" data-wallpaper="${key}">
+        <div class="theme-swatch-circle" style="${bg} background-size: cover; background-position: center;"></div>
+        <div class="theme-swatch-label">${wallpaper.label}</div>
+      </button>
+    `;
+  }).join('');
+}
+
 const Storage = {
   getQuotes() {
     const saved = localStorage.getItem('meigen_quotes');
@@ -587,7 +616,7 @@ const Storage = {
     return result;
   },
   getSettings() {
-    const defaults = { notificationTime: '07:00', notificationEnabled: false, theme: 'default', catEnabled: true };
+    const defaults = { notificationTime: '07:00', notificationEnabled: false, theme: 'default', catEnabled: true, wallpaper: 'night' };
     const saved = localStorage.getItem('meigen_settings');
     if (saved) return { ...defaults, ...JSON.parse(saved) };
     return defaults;
@@ -1297,6 +1326,7 @@ function renderSettings() {
   document.getElementById('cat-toggle').checked = s.catEnabled;
   document.getElementById('cat-name-input').value = state.catName;
   renderThemeSwatches();
+  renderWallpaperSwatches();
   updateAdminLockUI();
   renderCatAffectionUI();
 }
@@ -1523,6 +1553,18 @@ function bindEvents() {
     applyTheme(key);
     renderThemeSwatches();
     showToast(`テーマを「${THEMES[key].label}」に変更しました`);
+  });
+
+  // 着せ替え：壁紙選択（デフォルトテーマの時だけ背景に反映される）
+  document.getElementById('wallpaper-swatch-list').addEventListener('click', e => {
+    const swatch = e.target.closest('.theme-swatch');
+    if (!swatch) return;
+    const key = swatch.dataset.wallpaper;
+    state.settings.wallpaper = key;
+    Storage.saveSettings(state.settings);
+    applyTheme(state.settings.theme);
+    renderWallpaperSwatches();
+    showToast(`壁紙を「${WALLPAPERS[key].label}」に変更しました`);
   });
 
   // 相棒：枠の色（設定タブ・相棒タブのクイック設定、両方から同じ処理を使う）
