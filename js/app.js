@@ -2066,11 +2066,11 @@ function initInstallBanner() {
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
   if (localStorage.getItem('install_dismissed')) return;
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  if (isIOS) { setTimeout(() => showInstallBanner('ios'), 3500); return; }
+  if (isIOS) { setTimeout(() => showInstallBanner('ios'), 10000); return; }
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
-    setTimeout(() => showInstallBanner('android'), 3500);
+    setTimeout(() => showInstallBanner('android'), 10000);
   });
 }
 
@@ -2080,10 +2080,10 @@ function showInstallBanner(type) {
   const addBtn   = document.getElementById('install-btn');
   const closeBtn = document.getElementById('install-close');
   if (type === 'ios') {
-    msg.innerHTML = 'Safari の「共有」→「ホーム画面に追加」でインストールできます。';
+    msg.innerHTML = 'Safariの「共有」→「ホーム画面に追加」でインストールできます。';
     addBtn.style.display = 'none';
   } else {
-    msg.innerHTML = 'ホーム画面に追加して、アプリとして使いましょう。';
+    msg.innerHTML = '1日1つの名言で、あなたも猫もちょっと前向きに。';
     addBtn.addEventListener('click', async () => {
       if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; }
       localStorage.setItem('install_dismissed', '1');

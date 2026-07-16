@@ -336,7 +336,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.26.3</div>
+            <div class="settings-sublabel">Version 2.26.4</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -578,13 +578,14 @@
 
 <!-- インストールバナー -->
 <div id="install-banner" class="install-banner">
+  <button id="install-close" class="install-close-btn">✕</button>
   <div class="install-top">
-    <svg class="install-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-    </svg>
-    <div class="install-msg" id="install-msg"></div>
-    <button id="install-btn" class="install-add-btn">追加する</button>
-    <button id="install-close" class="install-close-btn">✕</button>
+    <div class="install-app-icon"></div>
+    <div class="install-body">
+      <div class="install-app-name">今日の名言</div>
+      <div class="install-msg" id="install-msg"></div>
+    </div>
+    <button id="install-btn" class="install-add-btn">追加</button>
   </div>
   <label class="install-check-label">
     <input type="checkbox" id="install-no-show">
