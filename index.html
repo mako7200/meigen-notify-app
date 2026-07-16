@@ -37,6 +37,10 @@
 
   <!-- ヘッダー -->
   <header>
+    <button id="notif-bell-btn" class="notif-bell-btn" aria-label="お知らせ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="notif-badge-dot" id="notif-badge-dot"></span>
+    </button>
     <div class="header-title">
       <span id="header-title-text">ホーム</span>
     </div>
@@ -336,7 +340,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">今日の名言</div>
-            <div class="settings-sublabel">Version 2.26.5</div>
+            <div class="settings-sublabel">Version 2.27.0</div>
           </div>
           <button id="check-update-btn" class="settings-action-btn settings-action-btn-sm">
             最新版を確認
@@ -492,6 +496,24 @@
     <button class="diary-close-btn" id="rarity-modal-close">✕</button>
     <div class="rarity-modal-total" id="rarity-modal-total">0 / 0</div>
     <div id="rarity-modal-rows"></div>
+  </div>
+</div>
+
+<!-- お知らせ一覧モーダル -->
+<div class="modal-overlay centered-modal" id="notif-modal-overlay">
+  <div class="modal centered-modal-box notif-modal-box">
+    <button class="diary-close-btn" id="notif-modal-close">✕</button>
+    <div class="modal-title">お知らせ</div>
+    <div id="notif-modal-rows"></div>
+  </div>
+</div>
+
+<!-- お知らせ詳細モーダル -->
+<div class="modal-overlay centered-modal" id="notif-detail-modal-overlay">
+  <div class="modal centered-modal-box notif-detail-modal-box">
+    <button class="diary-close-btn" id="notif-detail-modal-close">✕</button>
+    <div class="notif-detail-date" id="notif-detail-date"></div>
+    <div id="notif-detail-content"></div>
   </div>
 </div>
 

@@ -644,6 +644,9 @@ const Storage = {
   // 解放済み季節限定テーマ一覧 [key, ...]
   getSeasonalUnlocked() { const s = localStorage.getItem('meigen_seasonal_unlocked'); return s ? JSON.parse(s) : []; },
   saveSeasonalUnlocked(list) { localStorage.setItem('meigen_seasonal_unlocked', JSON.stringify(list)); },
+  // お知らせ一覧 [{ id, title, date, read }, ...]（新しい順）
+  getNotifications() { const s = localStorage.getItem('meigen_notifications'); return s ? JSON.parse(s) : []; },
+  saveNotifications(list) { localStorage.setItem('meigen_notifications', JSON.stringify(list)); },
   // 猫の懐き度 { total, todayDate, todayCount }
   getCatAffection() { const s = localStorage.getItem('meigen_cat_affection'); return s ? JSON.parse(s) : { total: 0, todayDate: '', todayCount: 0 }; },
   saveCatAffection(a) { localStorage.setItem('meigen_cat_affection', JSON.stringify(a)); },
@@ -686,6 +689,7 @@ let state = {
   isAdmin: false, // セッション中のみ有効（再読み込みでリセット）
   streak: 0,
   seasonalUnlocked: [], // 解放済み季節限定テーマのキー一覧
+  notifications: [], // [{ id, title, date, read }, ...]（新しい順）
   catAffection: { total: 0, todayDate: '', todayCount: 0 },
   // 一覧タブの小分け描画用（スクロールに応じて追加描画する）
   listRenderItems: [],
@@ -723,6 +727,7 @@ function init() {
   state.quizStats = Storage.getQuizStats();
   state.journeyRingChoice = Storage.getJourneyRingChoice();
   state.catColor = Storage.getCatColor();
+  state.notifications = Storage.getNotifications();
   updateStreak();
   state.currentQuote = getDailyQuote();
   checkSeasonalThemeUnlocks();
@@ -738,6 +743,7 @@ function init() {
   renderHome();
   renderList();
   renderSettings();
+  renderNotifBadge();
   bindEvents();
   initSplash();
   initInstallBanner();
@@ -1441,6 +1447,23 @@ function bindEvents() {
     if (e.target.id === 'rarity-modal-overlay') closeRarityModal();
   });
 
+  // お知らせ一覧モーダル
+  document.getElementById('notif-bell-btn').addEventListener('click', openNotifModal);
+  document.getElementById('notif-modal-close').addEventListener('click', closeNotifModal);
+  document.getElementById('notif-modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'notif-modal-overlay') closeNotifModal();
+  });
+  document.getElementById('notif-modal-rows').addEventListener('click', e => {
+    const row = e.target.closest('.notif-row');
+    if (row) openNotifDetail(row.dataset.notifId);
+  });
+
+  // お知らせ詳細モーダル（一覧の裏に残したまま、詳細だけ閉じられるようにする）
+  document.getElementById('notif-detail-modal-close').addEventListener('click', closeNotifDetail);
+  document.getElementById('notif-detail-modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'notif-detail-modal-overlay') closeNotifDetail();
+  });
+
   // 連続ログインボーナス説明モーダル
   document.getElementById('streak-indicator').addEventListener('click', openLoginModal);
   document.getElementById('login-modal-close').addEventListener('click', closeLoginModal);
@@ -2132,6 +2155,7 @@ function revealMythicIfNeeded() {
     playMythicSound();
     const card = document.getElementById('quote-card');
     if (card) spawnMythicBurst(card, quote.themeColors);
+    addNotification(`Mythic「${quote.author}」の名言に出会いました`, mythicEncounterDetailHtml(quote));
   }, burstDelay);
   scheduleRevealTimer(() => announceCostumeUnlockIfNeeded(quote), burstDelay + 1900); // 光の演出が収まってから通知
 }
@@ -2144,6 +2168,117 @@ function announceCostumeUnlockIfNeeded(quote) {
 
 let costumeUnlockBannerTimer = null;
 
+// ── お知らせ一覧 ──────────────────────────────────────────
+const NOTIF_MAX = 50;
+
+// 一覧タブのボトムナビと同じアイコン。「どこから操作できるか」を詳細画面で示す時に使う
+const NOTIF_NAV_ITEMS = [
+  { key: 'home',      label: 'ホーム', svg: '<path d="M3 10L12 3l9 7v10a1 1 0 01-1 1H4a1 1 0 01-1-1V10z"/><path d="M9 21V13h6v8"/>' },
+  { key: 'list',      label: '一覧',   svg: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/>' },
+  { key: 'companion', label: '相棒',   svg: '<path d="M20.8 4.6c-1.6-1.4-4-1.2-5.4.4L12 8.4 8.6 5c-1.4-1.6-3.8-1.8-5.4-.4-1.7 1.5-1.8 4.1-.2 5.8L12 19.5l9-9.1c1.6-1.7 1.5-4.3-.2-5.8z"/>' },
+  { key: 'settings',  label: '設定',   svg: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="2.2" fill="currentColor" stroke="none"/>' }
+];
+
+function notifNavHintHtml(activeKey) {
+  return `
+    <div class="notif-nav-hint">
+      ${NOTIF_NAV_ITEMS.map(item => `
+        <div class="notif-nav-hint-item${item.key === activeKey ? ' active' : ''}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+          <span>${item.label}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// 着せ替え解放の詳細内容（着せ替えアイコン・切り替え手順・季節限定なら期間も添える）
+function costumeUnlockDetailHtml(theme) {
+  const iconHtml = theme.icon ? `<div class="theme-icon-preview" style="background-image:url('${theme.icon}')"></div>` : '';
+  const seasonHtml = theme.seasonal
+    ? `<span class="notif-season">※期間限定：${theme.seasonal.start[0]}月${theme.seasonal.start[1]}日〜${theme.seasonal.end[0]}月${theme.seasonal.end[1]}日</span>`
+    : '';
+  return `
+    <div class="notif-detail-headline">${iconHtml}着せ替え「${theme.label}」を解放しました</div>
+    <div class="notif-detail-body">設定タブの「着せ替え」から選べます。${seasonHtml}${notifNavHintHtml('settings')}</div>
+  `;
+}
+
+// 超シークレットレア(Mythic)との出会いの詳細内容（一覧タブの本物のランクバッジと同じ見た目＋実際の出現率）
+function mythicEncounterDetailHtml(quote) {
+  const total = state.quotes.length;
+  const mythicCount = state.quotes.filter(q => q.rarity === 'mythic').length;
+  const pct = total > 0 ? (mythicCount / total * 100).toFixed(1) : '0';
+  return `
+    <div class="notif-detail-headline"><span class="notif-mythic-pill">MYTHIC</span><br>「${quote.author}」の名言に出会いました</div>
+    <div class="notif-detail-body">${quote.author}の名言です。もう一度読みたい時は一覧タブから探せます。<span class="notif-rarity-stat">出現率 約${pct}%（${mythicCount}種／全${total}種）</span>${notifNavHintHtml('list')}</div>
+  `;
+}
+
+function addNotification(title, detailHtml) {
+  const d = new Date();
+  const weekday = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  state.notifications.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    date: `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekday}） ${hh}:${mm}`,
+    detailHtml,
+    read: false
+  });
+  if (state.notifications.length > NOTIF_MAX) state.notifications.length = NOTIF_MAX;
+  Storage.saveNotifications(state.notifications);
+  renderNotifBadge();
+}
+
+function renderNotifBadge() {
+  const dot = document.getElementById('notif-badge-dot');
+  if (!dot) return;
+  dot.classList.toggle('show', state.notifications.some(n => !n.read));
+}
+
+// 一覧を開いただけでは既読にしない。個々のタイトルをタップして詳細を開いた時に初めて既読になる
+function renderNotifList() {
+  const rows = document.getElementById('notif-modal-rows');
+  rows.innerHTML = state.notifications.length
+    ? state.notifications.map(n => `
+        <button class="notif-row${n.read ? '' : ' unread'}" data-notif-id="${n.id}">
+          <div class="notif-row-title">${n.title}</div>
+          <div class="notif-row-date">${n.date}</div>
+        </button>
+      `).join('')
+    : '<div class="notif-empty">まだお知らせはありません</div>';
+}
+
+function openNotifModal() {
+  renderNotifList();
+  document.getElementById('notif-modal-overlay').classList.add('open');
+  lockBodyScroll();
+}
+
+function closeNotifModal() {
+  document.getElementById('notif-modal-overlay').classList.remove('open');
+  unlockBodyScroll();
+}
+
+// お知らせの詳細（タップした1件だけを既読にする。一覧はその場で更新し、裏に残ったままにする）
+function openNotifDetail(id) {
+  const n = state.notifications.find(n => n.id === id);
+  if (!n) return;
+  n.read = true;
+  Storage.saveNotifications(state.notifications);
+  renderNotifBadge();
+  renderNotifList();
+  document.getElementById('notif-detail-date').textContent = n.date;
+  document.getElementById('notif-detail-content').innerHTML = n.detailHtml || n.title;
+  document.getElementById('notif-detail-modal-overlay').classList.add('open');
+}
+
+function closeNotifDetail() {
+  document.getElementById('notif-detail-modal-overlay').classList.remove('open');
+}
+
 function showCostumeUnlockBanner(theme) {
   const banner = document.getElementById('costume-unlock-banner');
   if (!banner) return;
@@ -2152,6 +2287,7 @@ function showCostumeUnlockBanner(theme) {
   banner.classList.add('show');
   clearTimeout(costumeUnlockBannerTimer);
   costumeUnlockBannerTimer = setTimeout(() => banner.classList.remove('show'), 3200);
+  addNotification(`着せ替え「${theme.label}」を解放しました`, costumeUnlockDetailHtml(theme));
 }
 
 // ── 猫ウィジェット ────────────────────────────────────────

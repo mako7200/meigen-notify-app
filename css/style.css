@@ -155,6 +155,45 @@ header .header-title {
   gap: 8px;
 }
 
+.notif-bell-btn {
+  position: absolute;
+  right: 14px;
+  top: calc(env(safe-area-inset-top, 0px) + var(--header-height) / 2);
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.notif-bell-btn svg {
+  width: 21px;
+  height: 21px;
+}
+
+.notif-badge-dot {
+  display: none;
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e0655a;
+  border: 1.5px solid #0a0820;
+}
+
+.notif-badge-dot.show {
+  display: block;
+}
+
 /* 更新バナー */
 .update-banner {
   display: none;
@@ -1611,7 +1650,7 @@ main {
 
 .cat-widget {
   position: absolute;
-  right: 14px;
+  left: 14px;
   top: calc(env(safe-area-inset-top, 0px) + var(--header-height) / 2);
   transform: translateY(-50%);
   width: 46px;
@@ -1648,7 +1687,7 @@ main {
 }
 
 .cat-widget.away {
-  transform: translateY(-50%) translateX(70px);
+  transform: translateY(-50%) translateX(-70px);
   opacity: 0;
 }
 
@@ -3070,6 +3109,167 @@ html[data-theme="snow"] .snow-layer {
 .rarity-row-fill {
   height: 100%;
   border-radius: 5px;
+}
+
+/* お知らせ一覧モーダル */
+.notif-modal-box {
+  width: 340px;
+  max-width: 90vw;
+  background: #14122a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.notif-row {
+  display: block;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.notif-row:last-child {
+  border-bottom: none;
+}
+
+.notif-row-title {
+  font-size: 0.82rem;
+  color: rgba(255, 248, 230, 0.55);
+  line-height: 1.5;
+}
+
+.notif-row.unread .notif-row-title {
+  color: #fff;
+  font-weight: bold;
+}
+
+.notif-row-date {
+  font-size: 0.68rem;
+  color: rgba(255, 248, 230, 0.4);
+  margin-top: 4px;
+}
+
+.notif-empty {
+  font-size: 0.82rem;
+  color: rgba(255, 248, 230, 0.5);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.notif-detail-modal-box {
+  width: 320px;
+  max-width: 88vw;
+  background: #14122a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+  text-align: center;
+  padding-top: 34px;
+}
+
+.notif-detail-date {
+  font-size: 0.7rem;
+  color: rgba(255, 248, 230, 0.45);
+  margin-bottom: 10px;
+}
+
+.notif-detail-headline {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1.6;
+}
+
+.notif-detail-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.76rem;
+  color: rgba(255, 248, 230, 0.7);
+  line-height: 1.7;
+  text-align: left;
+}
+
+.notif-season {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: #FF5C8A;
+  font-weight: bold;
+}
+
+.notif-rarity-stat {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--primary-light);
+  font-weight: bold;
+}
+
+/* 一覧タブのカード左上に出る本物のランクバッジと同じ見た目 */
+.notif-mythic-pill {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  padding: 3px 12px;
+  border-radius: 20px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #C8943B, #8B2CF5);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.theme-icon-preview {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 0 0 2px rgba(240, 200, 120, 0.5);
+}
+
+.notif-nav-hint {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  padding: 10px 6px 8px;
+}
+
+.notif-nav-hint-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: rgba(255, 255, 255, 0.35);
+  width: 40px;
+}
+
+.notif-nav-hint-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.notif-nav-hint-item span {
+  font-size: 0.58rem;
+}
+
+.notif-nav-hint-item.active {
+  color: var(--primary-light);
+}
+
+.notif-nav-hint-item.active span {
+  font-weight: bold;
 }
 
 .login-modal-box {
