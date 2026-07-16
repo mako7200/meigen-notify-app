@@ -2812,9 +2812,21 @@ html[data-theme="snow"] .snow-layer {
 
 .install-msg {
   font-size: 0.7rem;
+  font-weight: 600;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--primary-light);
   margin-top: 2px;
+}
+
+.install-howto {
+  font-size: 0.64rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+
+.install-howto:empty {
+  display: none;
 }
 
 .install-add-btn {
@@ -2841,25 +2853,6 @@ html[data-theme="snow"] .snow-layer {
   cursor: pointer;
   padding: 4px;
   line-height: 1;
-}
-
-.install-check-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  padding-left: 2px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.install-check-label input[type="checkbox"] {
-  accent-color: var(--primary);
-  width: 15px;
-  height: 15px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .diary-close-btn {

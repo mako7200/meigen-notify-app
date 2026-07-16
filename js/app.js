@@ -2077,13 +2077,14 @@ function initInstallBanner() {
 function showInstallBanner(type) {
   const banner   = document.getElementById('install-banner');
   const msg      = document.getElementById('install-msg');
+  const howto    = document.getElementById('install-howto');
   const addBtn   = document.getElementById('install-btn');
   const closeBtn = document.getElementById('install-close');
+  msg.innerHTML = '1日1つの名言で、あなたも猫もちょっと前向きに。';
   if (type === 'ios') {
-    msg.innerHTML = 'Safariの「共有」→「ホーム画面に追加」でインストールできます。';
+    howto.innerHTML = 'Safariの「共有」→「ホーム画面に追加」でインストールできます。';
     addBtn.style.display = 'none';
   } else {
-    msg.innerHTML = '1日1つの名言で、あなたも猫もちょっと前向きに。';
     addBtn.addEventListener('click', async () => {
       if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; }
       localStorage.setItem('install_dismissed', '1');
@@ -2091,10 +2092,8 @@ function showInstallBanner(type) {
     });
   }
   banner.classList.add('show');
-  closeBtn.addEventListener('click', () => {
-    if (document.getElementById('install-no-show').checked) localStorage.setItem('install_dismissed', '1');
-    hideInstallBanner();
-  });
+  // ✕は今回だけ閉じる（永続的な非表示にはしない）。次にアプリを開いた時にまた表示することで、インストールを後押しする
+  closeBtn.addEventListener('click', hideInstallBanner);
 }
 
 function hideInstallBanner() {
