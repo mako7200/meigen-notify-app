@@ -3111,7 +3111,14 @@ html[data-theme="snow"] .snow-layer {
   border-radius: 5px;
 }
 
-/* お知らせ一覧モーダル */
+/* お知らせ一覧モーダル：鈴アイコンの近くから開く、他の中央モーダルとは違う「ヘッダー直下のパネル」形式 */
+.notif-top-modal {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--header-height) + 8px);
+  padding-right: 12px;
+}
+
 .notif-modal-box {
   width: 340px;
   max-width: 90vw;
@@ -3119,6 +3126,16 @@ html[data-theme="snow"] .snow-layer {
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   position: relative;
+  animation: notifPanelIn 0.22s ease;
+}
+
+@keyframes notifPanelIn {
+  from { transform: translateY(-14px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.notif-modal-box .modal-title {
+  color: var(--primary-light);
 }
 
 .notif-row {
