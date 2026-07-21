@@ -151,6 +151,53 @@ function initSortDropdown(dropdownId, onSelect) {
   });
 }
 
+// ── 一覧タブの表示設定（フィルター・並び替え）の保存/復元 ──
+// 前回終了時の状態をstateに反映する（実際の操作パネル（チェックボックス等）への反映はsyncListControlsUIで行う）
+function applyListPrefs() {
+  const prefs = Storage.getListPrefs();
+  if (!prefs) return;
+  if (Array.isArray(prefs.filterCategories) && prefs.filterCategories.length > 0) state.listFilterCategories = prefs.filterCategories;
+  if (prefs.sort) state.listSort = prefs.sort;
+  if (prefs.sortDir) state.listSortDir = prefs.sortDir;
+  if (typeof prefs.favoriteOnly === 'boolean') state.listFavoriteOnly = prefs.favoriteOnly;
+  if (prefs.adminStatusFilter) state.listAdminStatusFilter = prefs.adminStatusFilter;
+}
+
+function persistListPrefs() {
+  Storage.saveListPrefs({
+    filterCategories: state.listFilterCategories,
+    sort: state.listSort,
+    sortDir: state.listSortDir,
+    favoriteOnly: state.listFavoriteOnly,
+    adminStatusFilter: state.listAdminStatusFilter
+  });
+}
+
+// 起動時、復元したstateの内容を実際の操作パネル（チェックボックス・ドロップダウン・ボタン）の見た目に反映する
+function syncListControlsUI() {
+  document.querySelectorAll('.category-filter-checkbox').forEach(cb => {
+    cb.checked = state.listFilterCategories.includes(cb.value);
+  });
+  updateCategoryFilterLabel('category-filter-label', 'category-filter-checkbox', state.listFilterCategories);
+
+  const sortDropdown = document.getElementById('list-sort-dropdown');
+  const sortLabel = sortDropdown.querySelector('.sort-dropdown-current');
+  sortDropdown.querySelectorAll('.sort-dropdown-option').forEach(opt => {
+    const isActive = opt.dataset.value === state.listSort;
+    opt.classList.toggle('active', isActive);
+    if (isActive) sortLabel.textContent = opt.textContent;
+  });
+  updateSortDirectionBtn('list-sort-direction', state.listSortDir);
+
+  const favBtn = document.getElementById('fav-filter-btn');
+  favBtn.classList.toggle('active', state.listFavoriteOnly);
+  favBtn.textContent = state.listFavoriteOnly ? '★' : '☆';
+
+  document.querySelectorAll('#admin-status-filter .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.value === state.listAdminStatusFilter);
+  });
+}
+
 // ── カテゴリフィルター（複数選択ドロップダウン） ────────────
 function updateCategoryFilterLabel(labelId, checkboxClass, filterList) {
   const label = document.getElementById(labelId);
@@ -647,6 +694,9 @@ const Storage = {
   // お知らせ一覧 [{ id, title, date, read }, ...]（新しい順）
   getNotifications() { const s = localStorage.getItem('meigen_notifications'); return s ? JSON.parse(s) : []; },
   saveNotifications(list) { localStorage.setItem('meigen_notifications', JSON.stringify(list)); },
+  // 一覧タブの表示設定（カテゴリフィルター・並び替え・昇順降順・お気に入りのみ・管理者用開放状況フィルター）
+  getListPrefs() { const s = localStorage.getItem('meigen_list_prefs'); return s ? JSON.parse(s) : null; },
+  saveListPrefs(prefs) { localStorage.setItem('meigen_list_prefs', JSON.stringify(prefs)); },
   // 猫の懐き度 { total, todayDate, todayCount }
   getCatAffection() { const s = localStorage.getItem('meigen_cat_affection'); return s ? JSON.parse(s) : { total: 0, todayDate: '', todayCount: 0 }; },
   saveCatAffection(a) { localStorage.setItem('meigen_cat_affection', JSON.stringify(a)); },
@@ -728,6 +778,7 @@ function init() {
   state.journeyRingChoice = Storage.getJourneyRingChoice();
   state.catColor = Storage.getCatColor();
   state.notifications = Storage.getNotifications();
+  applyListPrefs();
   updateStreak();
   state.currentQuote = getDailyQuote();
   checkSeasonalThemeUnlocks();
@@ -741,6 +792,7 @@ function init() {
 
   applyTheme(state.settings.theme);
   renderHome();
+  syncListControlsUI();
   renderList();
   renderSettings();
   renderNotifBadge();
@@ -1367,6 +1419,7 @@ function bindEvents() {
   // 一覧：並び替え（自作ドロップダウン）
   initSortDropdown('list-sort-dropdown', value => {
     state.listSort = value;
+    persistListPrefs();
     renderList();
   });
   document.addEventListener('click', () => {
@@ -1377,6 +1430,7 @@ function bindEvents() {
   document.getElementById('list-sort-direction').addEventListener('click', () => {
     state.listSortDir = state.listSortDir === 'asc' ? 'desc' : 'asc';
     updateSortDirectionBtn('list-sort-direction', state.listSortDir);
+    persistListPrefs();
     renderList();
   });
 
@@ -1404,7 +1458,10 @@ function bindEvents() {
   });
 
   // 一覧：カテゴリフィルター（複数選択ドロップダウン）
-  initCategoryFilterDropdown('category-filter-dropdown', 'category-filter-label', 'category-filter-checkbox', 'listFilterCategories', renderList);
+  initCategoryFilterDropdown('category-filter-dropdown', 'category-filter-label', 'category-filter-checkbox', 'listFilterCategories', () => {
+    persistListPrefs();
+    renderList();
+  });
 
   // 一覧：お気に入り＋カードタップ（委譲）
   document.getElementById('quote-list').addEventListener('click', e => {
@@ -1435,6 +1492,7 @@ function bindEvents() {
     const btn = document.getElementById('fav-filter-btn');
     btn.classList.toggle('active', state.listFavoriteOnly);
     btn.textContent = state.listFavoriteOnly ? '★' : '☆';
+    persistListPrefs();
     renderList();
   });
 
@@ -1444,6 +1502,7 @@ function bindEvents() {
     if (!btn) return;
     state.listAdminStatusFilter = btn.dataset.value;
     document.querySelectorAll('#admin-status-filter .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    persistListPrefs();
     renderList();
   });
 
