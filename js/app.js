@@ -1016,7 +1016,7 @@ function renderBonusArea() {
   if (!isBonusDay() || getTodaysBonusRecord()) { area.innerHTML = ''; return; }
 
   area.innerHTML = `
-    <button class="bonus-banner" id="bonus-claim-btn">
+    <button class="bonus-banner bonus-banner-pending" id="bonus-claim-btn">
       <svg class="bonus-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" /></svg>
       <div>
         <div class="bonus-text-main">${state.streak}日連続ログインボーナス！</div>
@@ -1026,6 +1026,12 @@ function renderBonusArea() {
     </button>
   `;
   document.getElementById('bonus-claim-btn').addEventListener('click', performBonusClaim);
+}
+
+// 名言のタイプ演出が終わるまでボーナスバナーを隠しておき、誤タップを防ぐ（scheduleCardDetailsRevealから呼ばれる）
+function revealBonusBanner() {
+  const btn = document.getElementById('bonus-claim-btn');
+  if (btn) btn.classList.remove('bonus-banner-pending');
 }
 
 // ── ホームタブ描画 ────────────────────────────────────────
@@ -1101,6 +1107,7 @@ function renderHome() {
 // 本文のタイプ演出が終わってから、著者名（＋レア度演出）→ カテゴリバッジ → 詳細ボタンの順に段階的に見せる
 function scheduleCardDetailsReveal(q) {
   const base = typewriterDuration(q.text);
+  scheduleRevealTimer(() => revealBonusBanner(), base + 300); // 本文を読み終わる前に誤タップしないよう、タイプ演出の直後まで隠す
   scheduleRevealTimer(() => revealCardAuthor(q), base + 2000);
   scheduleRevealTimer(() => revealCardBadge(), base + 3000);
   scheduleRevealTimer(() => revealCardDetailButton(), base + 4000);
